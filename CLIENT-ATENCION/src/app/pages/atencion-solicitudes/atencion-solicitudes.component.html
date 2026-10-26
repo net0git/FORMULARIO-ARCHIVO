@@ -1,0 +1,1045 @@
+<div class="admin-layout" [class.sidebar-collapsed]="sidebarColapsado">
+  <!-- ===================================================================== -->
+  <!-- SIDEBAR IZQUIERDO OSCURO (Pág. 12 del Manual)                         -->
+  <!-- ===================================================================== -->
+  <aside class="admin-sidebar">
+    <!-- Logo Superior Blanco -->
+    <div class="sidebar-top-logo">
+      <div class="logo-icon">
+        <i class="fa-solid fa-file-signature"></i>
+      </div>
+      <div class="logo-text" *ngIf="!sidebarColapsado">
+        <span>SISTEMA</span>
+        <span>DE GESTIÓN</span>
+        <span>DE ARCHIVO <small>v1.0.0</small></span>
+      </div>
+    </div>
+
+    <!-- Perfil del Usuario en línea -->
+    <div class="sidebar-user-panel" *ngIf="!sidebarColapsado">
+      <div class="user-avatar">
+        <i class="fa-solid fa-user-tie"></i>
+      </div>
+      <div class="user-info">
+        <p class="user-role">{{ usuarioActual?.nombreCompleto || 'ADMINISTRADOR LA LIBERTAD' }}</p>
+        <span class="user-status">
+          <i class="fa-solid fa-circle"></i> Online: {{ usuarioActual?.usuario || 'admin1' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="sidebar-section-header" *ngIf="!sidebarColapsado">
+      MENÚ NAVEGACIÓN
+    </div>
+
+    <ul class="sidebar-menu">
+      <li class="menu-item" [class.active]="vistaActiva === 'solicitudes'" [class.open]="menuArchivoAbierto">
+        <a href="javascript:void(0)" (click)="menuArchivoAbierto = !menuArchivoAbierto">
+          <i class="fa-regular fa-file-lines"></i>
+          <span *ngIf="!sidebarColapsado">Archivo</span>
+          <i
+            class="fa-solid fa-angle-down arrow"
+            *ngIf="!sidebarColapsado"
+            [class.rotated]="!menuArchivoAbierto"
+          ></i>
+        </a>
+        <ul class="submenu" *ngIf="menuArchivoAbierto && !sidebarColapsado">
+          <li [class.active]="vistaActiva === 'solicitudes'">
+            <a href="javascript:void(0)" (click)="vistaActiva = 'solicitudes'">
+              <i class="fa-regular fa-circle"></i> Lista Solicitudes
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <li class="menu-item" [class.active]="vistaActiva === 'personal'" [class.open]="menuConfiguracionAbierto">
+        <a href="javascript:void(0)" (click)="menuConfiguracionAbierto = !menuConfiguracionAbierto">
+          <i class="fa-solid fa-gears"></i>
+          <span *ngIf="!sidebarColapsado">Configuración</span>
+          <i
+            class="fa-solid fa-angle-down arrow"
+            *ngIf="!sidebarColapsado"
+            [class.rotated]="!menuConfiguracionAbierto"
+          ></i>
+        </a>
+        <ul class="submenu" *ngIf="menuConfiguracionAbierto && !sidebarColapsado">
+          <li [class.active]="vistaActiva === 'personal'">
+            <a href="javascript:void(0)" (click)="vistaActiva = 'personal'">
+              <i class="fa-regular fa-circle"></i> Personal
+            </a>
+          </li>
+          <li>
+            <a href="javascript:void(0)" (click)="mostrarModalGoogleSheet = true">
+              <i class="fa-regular fa-circle"></i>
+              {{ archivoService.estaConectadoAGoogleSheet() ? 'Sheet Conectado' : 'Conectar Google Sheet' }}
+            </a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer" *ngIf="!sidebarColapsado">
+      <p class="version">Version 1.0</p>
+      <p class="copyright">Copyright &copy; 2022</p>
+    </div>
+  </aside>
+
+  <!-- ===================================================================== -->
+  <!-- CONTENEDOR PRINCIPAL DERECHO                                          -->
+  <!-- ===================================================================== -->
+  <div class="admin-main-wrapper">
+    <!-- Barra superior Guinda -->
+    <header class="admin-topbar">
+      <button type="button" class="btn-hamburger" (click)="sidebarColapsado = !sidebarColapsado" title="Menú">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <div class="topbar-right-buttons">
+        <button type="button" class="btn-top-key" (click)="mostrarModalCambiarClave = true">
+          <i class="fa-solid fa-key"></i> Cambiar Clave
+        </button>
+
+        <button type="button" class="btn-top-logout" (click)="cerrarSesion()">
+          <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido central -->
+    <main class="admin-content">
+      <ng-container *ngIf="vistaActiva === 'solicitudes'">
+      <!-- Tarjeta 1: Búsqueda de Solicitudes (Pág. 12 del Manual) -->
+      <section class="admin-card">
+        <div class="admin-card-header">
+          Busqueda de solicitudes
+        </div>
+        <div class="admin-card-body">
+          <fieldset class="search-fieldset">
+            <legend>Filtros de Busqueda</legend>
+
+            <div class="filters-grid-row1">
+              <div class="filter-field">
+                <label>Demandado:</label>
+                <input
+                  type="text"
+                  [(ngModel)]="filtroDemandado"
+                  (keyup.enter)="aplicarFiltros()"
+                  placeholder=""
+                />
+              </div>
+
+              <div class="filter-field">
+                <label>Demandante:</label>
+                <input
+                  type="text"
+                  [(ngModel)]="filtroDemandante"
+                  (keyup.enter)="aplicarFiltros()"
+                  placeholder=""
+                />
+              </div>
+
+              <div class="filter-field">
+                <label>Nro Expediente</label>
+                <input
+                  type="text"
+                  [(ngModel)]="filtroNroExpediente"
+                  (keyup.enter)="aplicarFiltros()"
+                  placeholder=""
+                />
+              </div>
+            </div>
+
+            <div class="filters-grid-row2">
+              <div class="filter-field">
+                <label>Fecha Inicio:</label>
+                <input type="date" [(ngModel)]="filtroFechaInicio" />
+              </div>
+
+              <div class="filter-field">
+                <label>Fecha Fin:</label>
+                <input type="date" [(ngModel)]="filtroFechaFin" />
+              </div>
+            </div>
+
+            <div class="filters-actions">
+              <button type="button" class="btn-filter" (click)="aplicarFiltros()">
+                <i class="fa-solid fa-magnifying-glass"></i> Buscar
+              </button>
+              <button type="button" class="btn-filter" (click)="limpiarFiltros()">
+                <i class="fa-solid fa-broom"></i> Limpiar
+              </button>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- Tarjeta 2: Lista de Solicitudes (Págs. 12, 13 y 14 del Manual) -->
+      <section class="admin-card">
+        <div class="admin-card-header">
+          Lista de solicitudes
+        </div>
+
+        <!-- Barra Guinda de Paginación y Exportación XLS -->
+        <div class="table-guinda-Controls">
+          <div class="total-counter">
+            EXISTEN :{{ solicitudesFiltradas.length }} EN TOTAL
+          </div>
+
+          <div class="controls-row">
+            <div class="pager-buttons">
+              <button type="button" class="btn-pager" (click)="paginaAnterior()" [disabled]="paginaActual <= 1">
+                <i class="fa-solid fa-backward-step"></i>
+              </button>
+              <span class="pager-range">{{ rangoTexto }}</span>
+              <button
+                type="button"
+                class="btn-pager"
+                (click)="paginaSiguiente()"
+                [disabled]="paginaActual >= totalPaginas"
+              >
+                <i class="fa-solid fa-forward-step"></i>
+              </button>
+            </div>
+
+            <div class="page-size-selector">
+              <label>Tamaño<br />Pagina</label>
+              <select [(ngModel)]="tamanoPagina" (ngModelChange)="cambiarTamanoPagina()">
+                <option *ngFor="let op of opcionesTamanoPagina" [ngValue]="op">{{ op }}</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              class="btn-xls-export"
+              (click)="exportarExcel()"
+              title="Exportar lista en formato Excel (.xlsx)"
+            >
+              <i class="fa-solid fa-file-excel"></i>
+              <span>XLS</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Solicitudes -->
+        <div class="table-responsive-wrapper">
+          <table class="solicitudes-table">
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>ACCIONES</th>
+                <th>ESTADO</th>
+                <th>CORTE</th>
+                <th>N°<br />SOL.</th>
+                <th>TIPO<br />USUARIO</th>
+                <th>TIPO SOLICITUD</th>
+                <th>FECHA INICIO</th>
+                <th>FECHA FINAL</th>
+                <th>TIEMPO TRANSCURRIDO</th>
+                <th>NRO EXPEDIENTE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sol of solicitudesPaginadas; let i = index">
+                <td class="td-center">{{ (paginaActual - 1) * tamanoPagina + i + 1 }}</td>
+
+                <td class="td-actions">
+                  <div class="action-btn-group">
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirVerDetalles(sol)"
+                      title="Ver"
+                    >
+                      <i class="fa-solid fa-eye"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirEnviarCorreo(sol)"
+                      title="Enviar Correo"
+                    >
+                      <i class="fa-solid fa-envelope"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirCambiarEstado(sol)"
+                      title="Estado"
+                    >
+                      <i class="fa-solid fa-flag"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirAgregarSeguimiento(sol)"
+                      title="Agregar Seguimiento"
+                    >
+                      <i class="fa-solid fa-plus"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirUbicacionExpediente(sol)"
+                      title="Ubicación"
+                    >
+                      <span class="icono-ubicacion" *ngIf="sol.ubicacion || sol.anaquel || sol.fila || sol.columna || sol.paquete"><i class="fa-regular fa-file"></i><i class="fa-solid fa-magnifying-glass lupa-sobre-expediente"></i></span><i class="fa-solid fa-magnifying-glass" *ngIf="!(sol.ubicacion || sol.anaquel || sol.fila || sol.columna || sol.paquete)"></i>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-row-action"
+                      (click)="abrirDocsEventosPdf(sol)"
+                      title="Ver documentos (DOC) de eventos en un solo PDF"
+                    >
+                      <i class="fa-regular fa-file-pdf"></i>
+                    </button>
+                  </div>
+                </td>
+
+                <td class="td-center">
+                  <span
+                    class="status-badge"
+                    [ngClass]="{
+                      'pendiente': sol.estado === 'PENDIENTE',
+                      'proceso': sol.estado === 'EN PROCESO',
+                      'citado': sol.estado === 'CITADO',
+                      'finalizado': sol.estado === 'FINALIZADO'
+                    }"
+                  >
+                    {{ sol.estado }}
+                  </span>
+                </td>
+
+                <td class="td-center">{{ sol.corte }}</td>
+                <td class="td-center">{{ sol.nroSolicitud }}</td>
+                <td class="td-center">{{ sol.tipoUsuario }}</td>
+                <td class="td-center">{{ sol.tipoSolicitud }}</td>
+                <td class="td-center">{{ sol.fechaInicio }}</td>
+                <td class="td-center">{{ sol.fechaFinal }}</td>
+                <td class="td-center">{{ sol.tiempoTranscurrido }}</td>
+                <td class="td-center">{{ sol.nroExpediente }}</td>
+              </tr>
+
+              <tr *ngIf="solicitudesPaginadas.length === 0">
+                <td colspan="11" class="td-empty-table">
+                  No se encontraron solicitudes con los filtros seleccionados.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      </ng-container>
+
+      <!-- ================================================================= -->
+      <!-- MÓDULO PERSONAL: ADMINISTRACIÓN DE USUARIOS                       -->
+      <!-- ================================================================= -->
+      <ng-container *ngIf="vistaActiva === 'personal'">
+        <section class="admin-card fade-in">
+          <div class="admin-card-header">
+            Administración de Personal / Usuarios del Sistema
+          </div>
+          <div class="admin-card-body">
+            <fieldset class="search-fieldset">
+              <legend>Filtros de Búsqueda de Personal</legend>
+
+              <div class="filters-grid-row1">
+                <div class="filter-field">
+                  <label>Usuario:</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="filtroUsuarioLogin"
+                    (keyup.enter)="aplicarFiltrosUsuarios()"
+                    placeholder="Ej: admin1, jperez"
+                  />
+                </div>
+
+                <div class="filter-field">
+                  <label>Nombres y Apellidos:</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="filtroUsuarioNombre"
+                    (keyup.enter)="aplicarFiltrosUsuarios()"
+                    placeholder="Buscar por nombre del trabajador"
+                  />
+                </div>
+
+                <div class="filter-field">
+                  <label>Corte Superior:</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="filtroUsuarioCorte"
+                    (keyup.enter)="aplicarFiltrosUsuarios()"
+                    placeholder="Ej: LA LIBERTAD, JUNIN"
+                  />
+                </div>
+              </div>
+
+              <div class="filters-actions">
+                <button type="button" class="btn-filter" (click)="aplicarFiltrosUsuarios()">
+                  <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                </button>
+                <button type="button" class="btn-filter" (click)="limpiarFiltrosUsuarios()">
+                  <i class="fa-solid fa-broom"></i> Limpiar
+                </button>
+                <button type="button" class="btn-filter" style="background: #28a745; margin-left: auto;" (click)="abrirNuevoUsuario()">
+                  <i class="fa-solid fa-user-plus"></i> Nuevo Usuario
+                </button>
+              </div>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="admin-card fade-in">
+          <div class="admin-card-header">
+            Lista de Personal Registrado
+          </div>
+
+          <div class="table-guinda-Controls">
+            <div class="total-counter">
+              EXISTEN :{{ usuariosFiltrados.length }} USUARIOS EN TOTAL
+            </div>
+          </div>
+
+          <div class="table-responsive-wrapper">
+            <table class="solicitudes-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>ACCIONES</th>
+                  <th>ESTADO</th>
+                  <th>USUARIO</th>
+                  <th>NOMBRES Y APELLIDOS / CARGO</th>
+                  <th>DNI</th>
+                  <th>CORREO ELECTRÓNICO</th>
+                  <th>CORTE SUPERIOR</th>
+                  <th>PERFIL / ROL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let u of usuariosFiltrados; let i = index">
+                  <td class="td-center">{{ i + 1 }}</td>
+                  <td class="td-actions">
+                    <div class="action-btn-group">
+                      <button
+                        type="button"
+                        class="btn-row-action"
+                        (click)="abrirEditarUsuario(u)"
+                        title="Editar Usuario"
+                      >
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn-row-action"
+                        (click)="alternarEstadoUsuario(u)"
+                        [title]="u.activo !== false ? 'Desactivar Usuario' : 'Activar Usuario'"
+                      >
+                        <i class="fa-solid" [ngClass]="u.activo !== false ? 'fa-toggle-on' : 'fa-toggle-off'"></i>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn-row-action"
+                        (click)="eliminarUsuarioConfirmado(u)"
+                        title="Eliminar Usuario"
+                        [disabled]="todosLosUsuarios.length <= 1"
+                      >
+                        <i class="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="td-center">
+                    <span
+                      class="status-badge"
+                      [ngClass]="u.activo !== false ? 'finalizado' : 'pendiente'"
+                    >
+                      {{ u.activo !== false ? 'ACTIVO' : 'INACTIVO' }}
+                    </span>
+                  </td>
+                  <td class="td-center"><strong>{{ u.usuario }}</strong></td>
+                  <td>{{ u.nombreCompleto }}</td>
+                  <td class="td-center">{{ u.dni || '-' }}</td>
+                  <td>{{ u.email || '-' }}</td>
+                  <td class="td-center">{{ u.corte }}</td>
+                  <td class="td-center">{{ u.rol }}</td>
+                </tr>
+                <tr *ngIf="usuariosFiltrados.length === 0">
+                  <td colspan="9" class="td-empty-table">
+                    No se encontraron usuarios registrados con los filtros seleccionados.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </ng-container>
+    </main>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL CREAR / EDITAR USUARIO (MÓDULO PERSONAL)                          -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalUsuario" (click)="mostrarModalUsuario = false">
+  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>{{ editandoUsuario ? 'Editar Usuario del Sistema' : 'Registrar Nuevo Usuario (Personal)' }}</h3>
+      <button type="button" (click)="mostrarModalUsuario = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body">
+      <div class="detail-grid-3">
+        <div>
+          <label>Usuario (Login): (*)</label>
+          <input
+            type="text"
+            [(ngModel)]="usuarioForm.usuario"
+            placeholder="Ej: jperez"
+            class="modal-input"
+          />
+        </div>
+        <div>
+          <label>Contraseña: (*)</label>
+          <input
+            type="text"
+            [(ngModel)]="usuarioForm.password"
+            placeholder="Clave de acceso"
+            class="modal-input"
+          />
+        </div>
+        <div>
+          <label>DNI:</label>
+          <input
+            type="text"
+            maxlength="12"
+            [(ngModel)]="usuarioForm.dni"
+            placeholder="8 dígitos"
+            class="modal-input"
+          />
+        </div>
+
+        <div style="grid-column: span 2;">
+          <label>Nombres y Apellidos / Cargo: (*)</label>
+          <input
+            type="text"
+            [(ngModel)]="usuarioForm.nombreCompleto"
+            placeholder="Ej: JUAN PEREZ MENDOZA"
+            class="modal-input"
+          />
+        </div>
+        <div>
+          <label>Correo Electrónico:</label>
+          <input
+            type="email"
+            [(ngModel)]="usuarioForm.email"
+            placeholder="usuario@pj.gob.pe"
+            class="modal-input"
+          />
+        </div>
+
+        <div>
+          <label>Corte Superior:</label>
+          <select [(ngModel)]="usuarioForm.corte" class="modal-input">
+            <option *ngFor="let c of cortes" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+        <div>
+          <label>Perfil / Rol:</label>
+          <select [(ngModel)]="usuarioForm.rol" class="modal-input">
+            <option value="PERSONAL JURISDICCIONAL">PERSONAL JURISDICCIONAL</option>
+            <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+          </select>
+        </div>
+        <div>
+          <label>Estado:</label>
+          <select [(ngModel)]="usuarioForm.activo" class="modal-input">
+            <option [ngValue]="true">ACTIVO</option>
+            <option [ngValue]="false">INACTIVO</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-action-section" style="margin-top: 20px;">
+        <label>Accion</label>
+        <button type="button" class="btn-modal-save" (click)="guardarFormularioUsuario()">
+          <i class="fa-regular fa-floppy-disk"></i> Guardar Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 1: VISUALIZACIÓN DE DETALLES DE SOLICITUD (Pág. 15 del Manual)    -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalVerDetalles && solicitudActiva" (click)="mostrarModalVerDetalles = false">
+  <div class="admin-modal-dialog large fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>SOLICITUD</h3>
+      <button type="button" (click)="mostrarModalVerDetalles = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body scrollable">
+      <fieldset class="detail-fieldset">
+        <legend>Datos del Tipo de solicitud</legend>
+        <div class="detail-grid-3">
+          <div>
+            <label>Tipo de Usuario:</label>
+            <input type="text" [value]="solicitudActiva.tipoUsuario" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Solicito:</label>
+            <input type="text" [value]="solicitudActiva.tipoSolicitud" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Razón:</label>
+            <input
+              type="text"
+              [value]="solicitudActiva.razonSolicitud || solicitudActiva.motivoTramite"
+              readonly
+              class="readonly-input"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="detail-fieldset">
+        <legend>Datos Basicos</legend>
+        <div class="detail-grid-3">
+          <div>
+            <label>Nro Doc:</label>
+            <input type="text" [value]="solicitudActiva.dni" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Apellidos:</label>
+            <input type="text" [value]="solicitudActiva.apellidos" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Nombres:</label>
+            <input type="text" [value]="solicitudActiva.nombres" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Correo Electronico:</label>
+            <input type="text" [value]="solicitudActiva.email" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Domicilio Procesal:</label>
+            <input type="text" [value]="solicitudActiva.domicilioProcesal" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Telefono Celular:</label>
+            <input type="text" [value]="solicitudActiva.celular" readonly class="readonly-input" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="detail-fieldset">
+        <legend>Datos del expediente</legend>
+        <div class="detail-grid-3">
+          <div>
+            <label>Número:</label>
+            <input type="text" [value]="solicitudActiva.numeroExpedienteCorto || '-'" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Año:</label>
+            <input type="text" [value]="solicitudActiva.anioExpediente || '-'" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Código Completo:</label>
+            <input
+              type="text"
+              [value]="solicitudActiva.codigoCompletoExpediente || solicitudActiva.nroExpediente"
+              readonly
+              class="readonly-input"
+            />
+          </div>
+          <div>
+            <label>Demandante/Agraviado:</label>
+            <input type="text" [value]="solicitudActiva.demandante" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Demandado/Inculpado:</label>
+            <input type="text" [value]="solicitudActiva.demandado" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Materia/Delito:</label>
+            <input type="text" [value]="solicitudActiva.materiaDelito" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Juzgado/Instancia:</label>
+            <input type="text" [value]="solicitudActiva.juzgadoEmisor" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Fecha de Envio al Archivo:</label>
+            <input type="text" [value]="solicitudActiva.fechaEnvioArchivo" readonly class="readonly-input" />
+          </div>
+          <div>
+            <label>Motivo de trámite:</label>
+            <input type="text" [value]="solicitudActiva.motivoTramite" readonly class="readonly-input" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="detail-fieldset">
+        <legend>Documentos Adjuntos</legend>
+        <table class="inner-guinda-table">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>CONCEPTO</th>
+              <th>DOCUMENTO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of solicitudActiva.documentos; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ doc.descripcion || doc.tipo }} ({{ doc.nombreArchivo }})</td>
+              <td>
+                <button type="button" class="btn-download-doc" (click)="descargarOVerAdjunto(doc)">
+                  <i class="fa-regular fa-file-pdf"></i> Ver / Descargar
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!solicitudActiva.documentos || solicitudActiva.documentos.length === 0">
+              <td colspan="3">Sin documentos adjuntos registrados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </fieldset>
+
+      <fieldset class="detail-fieldset">
+        <legend>Eventos Realizados</legend>
+        <table class="inner-guinda-table">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>ACCION</th>
+              <th>USUARIO</th>
+              <th>TRABAJADOR</th>
+              <th>DESCRIPCION</th>
+              <th>FECHA</th>
+              <th>DOC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ev of solicitudActiva.eventos; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ ev.accion }}</td>
+              <td>{{ ev.usuario }}</td>
+              <td>{{ ev.trabajador }}</td>
+              <td>{{ ev.descripcion }}</td>
+              <td>{{ ev.fecha }}</td>
+              <td>
+                <button
+                  *ngIf="ev.accion === 'REGISTRO DE SOLICITUD'"
+                  type="button"
+                  class="btn-download-doc"
+                  (click)="verDocumentoEvento(ev, solicitudActiva)"
+                  title="Ver / Descargar Constancia de Solicitud"
+                >
+                  <i class="fa-regular fa-file-pdf"></i> Solicitud
+                </button>
+                <button
+                  *ngIf="ev.accion !== 'REGISTRO DE SOLICITUD' && ev.documento"
+                  type="button"
+                  class="btn-download-doc"
+                  (click)="verDocumentoEvento(ev, solicitudActiva)"
+                  [title]="ev.documento.nombreArchivo || 'Ver documento adjunto'"
+                >
+                  <i class="fa-regular fa-file-pdf"></i> {{ ev.documento.nombreArchivo || 'Ver Doc' }}
+                </button>
+                <span *ngIf="ev.accion !== 'REGISTRO DE SOLICITUD' && !ev.documento">-</span>
+              </td>
+            </tr>
+            <tr *ngIf="!solicitudActiva.eventos || solicitudActiva.eventos.length === 0">
+              <td colspan="7">Aún no se han registrado eventos de seguimiento.</td>
+            </tr>
+          </tbody>
+        </table>
+      </fieldset>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 2: ENVÍO DE CORREOS (Págs. 16 y 17 del Manual)                    -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalEnviarCorreo && solicitudActiva" (click)="mostrarModalEnviarCorreo = false">
+  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>Envio Correo</h3>
+      <button type="button" (click)="mostrarModalEnviarCorreo = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body">
+      <label class="checkbox-original">
+        <input type="checkbox" [(ngModel)]="correoEnviarOriginal" />
+        <span>Desea Enviar Solicitud Original y Adjuntos de solicitud?</span>
+      </label>
+
+      <div class="detail-grid-3">
+        <div>
+          <label>Correo Destinatario:</label>
+          <input type="email" [(ngModel)]="correoDestinatario" class="modal-input" />
+        </div>
+        <div>
+          <label>C.C.:</label>
+          <input type="email" [(ngModel)]="correoCc" class="modal-input" />
+        </div>
+        <div>
+          <label>Correo Respaldo:</label>
+          <input type="email" [(ngModel)]="correoRespaldo" class="modal-input" />
+        </div>
+      </div>
+
+      <div class="mail-attachments-box">
+        <div class="mail-attachments-bar">
+          <span>Documentos Adjuntos</span>
+          <button type="button" class="btn-add-mail-att" (click)="agregarFilaAdjuntoCorreo()">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <table class="inner-guinda-table">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Quitar</th>
+              <th>Archivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let fila of correoAdjuntosExtras; let idx = index">
+              <td>{{ idx + 1 }}</td>
+              <td>
+                <button type="button" class="btn-trash-gray" (click)="quitarFilaAdjuntoCorreo(fila.id)">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+              <td>
+                <input type="file" (change)="onSeleccionarAdjuntoCorreo($event, fila)" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mail-message-box">
+        <label>Mensaje:</label>
+        <textarea rows="4" [(ngModel)]="correoMensaje" class="modal-textarea"></textarea>
+      </div>
+
+      <div class="modal-action-section">
+        <label>Accion</label>
+        <button
+          type="button"
+          class="btn-modal-save"
+          [disabled]="enviandoCorreo"
+          (click)="confirmarEnvioCorreo()"
+        >
+          <i class="fa-solid fa-share"></i> {{ enviandoCorreo ? 'Enviando...' : 'Enviar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 3: CAMBIAR ESTADO DE LA SOLICITUD (Pág. 17 del Manual)            -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalCambiarEstado && solicitudActiva" (click)="mostrarModalCambiarEstado = false">
+  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>Cambiar Estado de la Solicitud</h3>
+      <button type="button" (click)="mostrarModalCambiarEstado = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body">
+      <div class="two-col-action-row">
+        <div>
+          <label>Estado</label>
+          <select [(ngModel)]="nuevoEstadoSeleccionado" class="modal-input">
+            <option *ngFor="let est of estadosDisponibles" [value]="est">{{ est }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Accion</label>
+          <button type="button" class="btn-modal-save full" (click)="guardarCambioEstado()">
+            <i class="fa-regular fa-floppy-disk"></i> Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 4: AGREGAR DETALLES DE SEGUIMIENTO (Págs. 18 y 19 del Manual)     -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalSeguimiento && solicitudActiva" (click)="mostrarModalSeguimiento = false">
+  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>Agregar Seguimiento</h3>
+      <button type="button" (click)="mostrarModalSeguimiento = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body">
+      <div class="modal-field">
+        <label>Descripcion:</label>
+        <input
+          type="text"
+          [(ngModel)]="descripcionSeguimiento"
+          placeholder="SE PASO AL SEÑOR JUAN PEREZ PARA QUE PUEDA REALIZAR LA BUSQUEDA EN LOS ANAQUELES"
+          class="modal-input"
+          (keyup.enter)="guardarSeguimiento()"
+        />
+      </div>
+
+      <div class="modal-field" style="margin-top: 14px;">
+        <label>Adjuntar Documento (Opcional):</label>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+          <input
+            type="file"
+            accept=".pdf,image/*,.doc,.docx"
+            (change)="onSeleccionarArchivoSeguimiento($event)"
+            class="modal-input"
+            style="padding: 6px;"
+          />
+          <button
+            *ngIf="documentoSeguimientoTemp"
+            type="button"
+            class="btn-trash-gray"
+            (click)="limpiarArchivoSeguimiento()"
+            title="Quitar archivo seleccionado"
+          >
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+        <small *ngIf="documentoSeguimientoTemp" style="display: block; margin-top: 4px; color: #2e7d32; font-weight: 600;">
+          <i class="fa-solid fa-paperclip"></i> Archivo listo: {{ documentoSeguimientoTemp.nombreArchivo }}
+        </small>
+      </div>
+
+      <div class="modal-action-section" style="margin-top: 24px;">
+        <label>Accion</label>
+        <button
+          type="button"
+          class="btn-modal-save"
+          [disabled]="guardandoSeguimiento"
+          (click)="guardarSeguimiento()"
+        >
+          <i class="fa-regular fa-floppy-disk"></i>
+          {{ guardandoSeguimiento ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 5: UBICACIÓN FÍSICA DE EXPEDIENTES (Págs. 19 y 20 del Manual)     -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalUbicacion && solicitudActiva" (click)="mostrarModalUbicacion = false">
+  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>Ubicación Expediente</h3>
+      <button type="button" (click)="mostrarModalUbicacion = false">&times;</button>
+    </div>
+
+    <div class="admin-modal-body">
+      <div class="modal-field">
+        <label>Ubicación:</label>
+        <input type="text" [(ngModel)]="ubicacionForm.ubicacion" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label>Anaquel:</label>
+        <input type="text" [(ngModel)]="ubicacionForm.anaquel" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label>Fila:</label>
+        <input type="text" [(ngModel)]="ubicacionForm.fila" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label>Columna:</label>
+        <input type="text" [(ngModel)]="ubicacionForm.columna" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label>Paquete:</label>
+        <input type="text" [(ngModel)]="ubicacionForm.paquete" class="modal-input" />
+      </div>
+
+      <div class="modal-action-section">
+        <label>Accion</label>
+        <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
+          <i class="fa-regular fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL CAMBIAR CLAVE (TOPBAR)                                            -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="mostrarModalCambiarClave" (click)="mostrarModalCambiarClave = false">
+  <div class="admin-modal-dialog small fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header">
+      <h3>Cambiar Clave de Usuario</h3>
+      <button type="button" (click)="mostrarModalCambiarClave = false">&times;</button>
+    </div>
+    <div class="admin-modal-body">
+      <div class="modal-field">
+        <label>Nueva Contraseña para {{ usuarioActual?.usuario || 'admin1' }}:</label>
+        <input type="password" [(ngModel)]="nuevaClaveInput" class="modal-input" placeholder="Ingrese nueva clave" />
+      </div>
+      <div class="modal-action-section">
+        <button type="button" class="btn-modal-save" (click)="guardarNuevaClave()">
+          <i class="fa-regular fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- VENTANA DE ALERTA VERDE DE CONFIRMACIÓN (Págs. 17, 18, 19 y 20)         -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay" *ngIf="alertaVerdeMensaje" (click)="alertaVerdeMensaje = ''">
+  <div class="sys-alert-window fade-in" (click)="$event.stopPropagation()">
+    <div class="sys-alert-titlebar">
+      <span>Alerta</span>
+      <button type="button" (click)="alertaVerdeMensaje = ''">&times;</button>
+    </div>
+    <div class="sys-alert-body" (click)="alertaVerdeMensaje = ''">
+      <div class="sys-check-icon">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h4>{{ alertaVerdeMensaje }}</h4>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL 6: CONSTANCIA DE SOLICITUD Y VISOR DE DOCUMENTOS EN PDF           -->
+<!-- ======================================================================= -->
+<app-pdf-viewer-modal
+  *ngIf="mostrarModalPdf && (solicitudActiva || documentoVisorActivo)"
+  [solicitud]="solicitudActiva"
+  [documento]="documentoVisorActivo"
+  [modoDocs]="modoDocsEventos"
+  (cerrar)="mostrarModalPdf = false; documentoVisorActivo = null; modoDocsEventos = false"
+></app-pdf-viewer-modal>
+
+<!-- ======================================================================= -->
+<!-- MODAL DE CONEXIÓN CON GOOGLE SHEETS                                     -->
+<!-- ======================================================================= -->
+<app-google-sheet-modal
+  *ngIf="mostrarModalGoogleSheet"
+  (cerrar)="mostrarModalGoogleSheet = false"
+></app-google-sheet-modal>

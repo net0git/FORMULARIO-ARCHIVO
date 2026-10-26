@@ -1,0 +1,20 @@
+# Dependencias y compilados
+node_modules/
+dist/
+.angular/
+out-tsc/
+
+# Logs y temporales
+*.log
+npm-debug.log*
+.tmp/
+.cache/
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# URL privada del Apps Script (no subir)
+**/public/config.json

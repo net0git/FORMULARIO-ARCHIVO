@@ -1,0 +1,629 @@
+<div class="pj-public-wrapper">
+  <!-- Barra superior institucional con indicador sutil de estado -->
+  <div class="pj-top-utility-bar">
+    <div class="pj-top-left-brand">
+      <div class="pj-logo-emblem">
+        <span></span><span></span>
+        <span></span><span></span>
+      </div>
+      <span class="pj-brand-title">PODER JUDICIAL DEL PERÚ</span>
+    </div>
+
+    <div class="pj-subtle-status" [class.online]="conectado" [class.checking]="verificandoConexion">
+      <span class="status-dot"></span>
+      <span class="status-label">
+        {{ verificandoConexion ? 'Verificando servicio...' : (conectado ? 'Servicio en línea' : 'Servicio sin conexión') }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Área central dividida (Panel Izquierdo + Panel Derecho de Formulario Guinda) -->
+  <div class="pj-main-split">
+    <div class="pj-left-accent-bar"></div>
+
+    <!-- Centro: Título institucional y nota de plazo de atención -->
+    <div class="pj-center-hero">
+      <div class="pj-hero-content">
+        <div class="pj-system-heading">
+          <div class="pj-heading-line1">
+            <span class="pj-chevron">&#10095;</span>
+            <span class="pj-text-dark">SISTEMA DE</span>
+            <span class="pj-box-guinda">GESTIÓN</span>
+          </div>
+          <div class="pj-heading-line2">
+            <span class="pj-text-dark">DE</span>
+            <span class="pj-box-guinda">ARCHIVO CENTRAL</span>
+            <span class="pj-text-dark">CUSCO</span>
+          </div>
+        </div>
+
+        <div class="pj-subtitle-block">
+          <span class="pj-subtitle-text">Registrar Solicitud</span>
+          <div class="pj-subtitle-underline"></div>
+        </div>
+
+        <div class="pj-quote-container">
+          <span class="pj-quote-mark open">&ldquo;</span>
+          <p class="pj-quote-body">
+            Recuerde que el plazo de atención es de 5 a 7 días hábiles contabilizados a partir de verificada y
+            admitida su solicitud. El plazo puede tardar más días si se trata de una búsqueda crítica
+          </p>
+          <span class="pj-quote-mark close">&rdquo;</span>
+        </div>
+      </div>
+
+      <!-- Barra inferior de Costos de Trámites (Cargados en tiempo real desde la pestaña "Tramites" de Google Sheets) -->
+      <div class="pj-costs-footer">
+        <div class="pj-costs-header-row">
+          <h3 class="pj-costs-title">
+            Costos de Trámites
+            <span
+              class="costs-sync-dot"
+              [class.ok]="conectado"
+              [title]="conectado ? 'Costos sincronizados con Google Sheets' : 'Sin conexión con la hoja de cálculo'"
+            ></span>
+          </h3>
+          <div class="pj-bn-badge">
+            <div class="bn-left">
+              <span class="bn-slash">//</span>
+              <div class="bn-name">
+                <small>Banco de</small>
+                <strong>la Nación</strong>
+              </div>
+            </div>
+            <div class="bn-right">
+              <span>CUENTA</span>
+              <strong>N° 07285</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cuando está conectado, muestra los costos traídos desde Google Sheets -->
+        <div class="pj-costs-grid" *ngIf="conectado && todosLosTramites.length > 0">
+          <div class="pj-costs-col">
+            <div class="pj-cost-item" *ngFor="let item of costosCol1">
+              <span class="cost-name">&bull; {{ item.nombreCorto }}</span>
+              <span class="cost-price">
+                <strong class="red-s">S/</strong> {{ item.costo.replace('S/', '').trim() }}
+              </span>
+            </div>
+          </div>
+          <div class="pj-costs-col">
+            <div class="pj-cost-item" *ngFor="let item of costosCol2">
+              <span class="cost-name">&bull; {{ item.nombreCorto }}</span>
+              <span class="cost-price">
+                <strong class="red-s">S/</strong> {{ item.costo.replace('S/', '').trim() }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mientras verifica o si no hay conexión a la hoja -->
+        <div class="pj-costs-empty" *ngIf="!conectado || todosLosTramites.length === 0">
+          <span *ngIf="verificandoConexion">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando servicios y precios desde la hoja "Servicios" de Google Sheets...
+          </span>
+          <span *ngIf="!verificandoConexion">
+            <i class="fa-solid fa-plug-circle-xmark"></i>
+            {{ mensajeErrorConexion || 'No se pudieron cargar los costos desde la hoja "Servicios".' }}
+            <button type="button" class="btn-retry-inline" (click)="reintentarConexion()">Reintentar</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Tarjeta Guinda del Formulario Paso a Paso -->
+    <div class="pj-right-form-column" [class.form-locked]="!conectado && !verificandoConexion">
+      <div class="pj-form-card">
+        <div class="pj-card-top-badge">
+          <div class="pj-badge-icon">
+            <i class="fa-solid fa-file-signature"></i>
+          </div>
+          <div class="pj-badge-text">
+            <span>SISTEMA</span>
+            <span>DE GESTIÓN</span>
+            <span>DE ARCHIVO <small>v1.0.0</small></span>
+          </div>
+        </div>
+
+        <div class="pj-step-dots">
+          <span [class.active]="paso === 1" title="1. Declaración Jurada">1</span>
+          <span [class.active]="paso === 2" title="2. Tipo de Solicitud">2</span>
+          <span [class.active]="paso === 3" title="3. Identidad del Solicitante">3</span>
+          <span [class.active]="paso === 4" title="4. Datos del Expediente">4</span>
+          <span [class.active]="paso === 5" title="5. Adjuntar Documentos">5</span>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PASO 1: DECLARACIÓN JURADA (Pág. 6 del Manual)                  -->
+        <!-- =============================================================== -->
+        <div class="pj-step-body fade-in" *ngIf="paso === 1">
+          <h2 class="pj-form-title">Registrar Solicitud</h2>
+
+          <p class="pj-yellow-intro">
+            Estimado Usuario(a): Para dar inicio a los trámites de:
+          </p>
+
+          <!-- Lista alimentada por la pestaña Tramites de Google Sheets -->
+          <ul class="pj-tramites-list" *ngIf="conectado && todosLosTramites.length > 0">
+            <li *ngFor="let tr of todosLosTramites">{{ tr.nombreCorto }}</li>
+          </ul>
+          <div class="pj-locked-banner" *ngIf="!conectado && !verificandoConexion">
+            <i class="fa-solid fa-lock"></i>
+            <span>Formulario bloqueado: Sin conexión con la Hoja de Cálculo del Archivo Central.</span>
+          </div>
+
+          <p class="pj-dj-paragraph">
+            Deberá llenar los campos obligatorios del formulario virtual así como adjuntar el documento de pago por
+            derecho de trámite respectivo.
+          </p>
+          <p class="pj-dj-paragraph">
+            La información proporcionada se presume veraz y tiene valor de declaración jurada, quedando sujeta a
+            fiscalización posterior por la Institución, facultando en caso corresponda, el inicio de las acciones
+            civiles, penales y administrativas al incurrir en cualquiera de los supuestos de falsedad previstos en la
+            legislación nacional vigente (Delito Contra la Fe Pública Art. 427 y siguientes del Código Penal).
+          </p>
+
+          <div class="pj-step1-actions">
+            <button
+              type="button"
+              class="btn-pj-accept"
+              [disabled]="!conectado || verificandoConexion"
+              (click)="aceptarDeclaracionJurada()"
+            >
+              <ng-container *ngIf="verificandoConexion">
+                Conectando... <i class="fa-solid fa-spinner fa-spin"></i>
+              </ng-container>
+              <ng-container *ngIf="!verificandoConexion && conectado">
+                Aceptar <i class="fa-solid fa-check"></i>
+              </ng-container>
+              <ng-container *ngIf="!verificandoConexion && !conectado">
+                Formulario Bloqueado <i class="fa-solid fa-lock"></i>
+              </ng-container>
+            </button>
+
+            <button type="button" class="btn-pj-manual" (click)="descargarManualUsuario()">
+              Manual de Usuario <i class="fa-regular fa-file-pdf"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PASO 2: DATOS DEL TIPO DE SOLICITUD (Págs. 6 y 7 del Manual)    -->
+        <!-- =============================================================== -->
+        <div class="pj-step-body fade-in" *ngIf="paso === 2 && conectado">
+          <h2 class="pj-form-title">Datos del Tipo de solicitud</h2>
+          <p class="pj-required-note">* Campo Obligatorio</p>
+
+          <div class="pj-field-group">
+            <label>Cortes:<span class="req">(*)</span></label>
+            <select [(ngModel)]="corteSeleccionada" class="pj-select">
+              <option *ngFor="let c of cortes" [value]="c">{{ c }}</option>
+            </select>
+          </div>
+
+          <div class="pj-field-group">
+            <label>Tipo de Usuario: <span class="req">(*)</span></label>
+            <select [(ngModel)]="tipoUsuarioSeleccionado" class="pj-select">
+              <option *ngFor="let tu of tiposUsuario" [value]="tu.valor">{{ tu.etiqueta }}</option>
+            </select>
+          </div>
+
+          <div class="pj-field-group">
+            <label>Solicito: <span class="req">(*)</span></label>
+            <select [(ngModel)]="solicitoSeleccionado" class="pj-select">
+              <option *ngFor="let tr of todosLosTramites" [value]="tr.codigo">{{ tr.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="pj-field-group">
+            <label>Razón: <span class="req">(*)</span></label>
+            <textarea
+              [(ngModel)]="razonSolicitud"
+              rows="2"
+              placeholder="Indique brevemente la razón o motivo de su solicitud"
+              class="pj-input pj-textarea"
+            ></textarea>
+          </div>
+
+          <div class="pj-nav-buttons">
+            <button type="button" class="btn-pj-nav" (click)="limpiarAlertas(); paso = 1">
+              Regresar <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button type="button" class="btn-pj-nav" (click)="irAPaso3()">
+              Siguiente <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PASO 3: IDENTIDAD DEL SOLICITANTE (Pág. 7 + Foto/PDF de DNI)    -->
+        <!-- =============================================================== -->
+        <div class="pj-step-body fade-in" *ngIf="paso === 3 && conectado">
+          <h2 class="pj-form-title">Identidad del Solicitante</h2>
+          <p class="pj-required-note">* Campo Obligatorio</p>
+
+          <div class="pj-field-group">
+            <label>DNI: <span class="req">(*)</span></label>
+            <div class="pj-input-with-btn">
+              <input
+                type="text"
+                maxlength="12"
+                [(ngModel)]="dni"
+                (ngModelChange)="onDniChange()"
+                placeholder="Ingrese 8 dígitos de su DNI"
+                class="pj-input"
+              />
+              <button
+                type="button"
+                class="btn-pj-search"
+                (click)="validarDniConLupa()"
+                title="Validar DNI"
+              >
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </button>
+            </div>
+            <small class="pj-validation-chip ok" *ngIf="dniValidado">
+              <i class="fa-solid fa-circle-check"></i> DNI verificado para registro
+            </small>
+          </div>
+
+          <div class="pj-field-group pj-upload-box">
+            <label>
+              <i class="fa-solid fa-id-card"></i> Foto o PDF del DNI (Ambos lados): <span class="req">(*)</span>
+            </label>
+            <div class="pj-file-picker-row">
+              <label class="btn-pj-file-label">
+                <i class="fa-solid fa-upload"></i> Subir Foto / PDF
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  (change)="onSeleccionarArchivoDni($event)"
+                  hidden
+                />
+              </label>
+              <span class="pj-file-name" *ngIf="documentoDniAdjunto">
+                <i class="fa-solid fa-check"></i> {{ documentoDniAdjunto.nombreArchivo }}
+              </span>
+              <span class="pj-file-name empty" *ngIf="!documentoDniAdjunto">
+                Pendiente adjuntar foto o PDF
+              </span>
+            </div>
+          </div>
+
+          <div class="pj-two-cols">
+            <div class="pj-field-group">
+              <label>Apellidos: <span class="req">(*)</span></label>
+              <input
+                type="text"
+                [(ngModel)]="apellidos"
+                placeholder="Ej. FLORES AGUILAR"
+                class="pj-input"
+              />
+            </div>
+            <div class="pj-field-group">
+              <label>Nombres: <span class="req">(*)</span></label>
+              <input
+                type="text"
+                [(ngModel)]="nombres"
+                placeholder="Ej. DIEGO ISAIAS"
+                class="pj-input"
+              />
+            </div>
+          </div>
+
+          <div class="pj-field-group">
+            <label>Email: <span class="req">(*)</span></label>
+            <input
+              type="email"
+              [(ngModel)]="email"
+              placeholder="correo@ejemplo.com"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Teléfono Celular: <span class="req">(*)</span></label>
+            <input
+              type="tel"
+              maxlength="15"
+              [(ngModel)]="celular"
+              placeholder="Ej. 987654321"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Domicilio Procesal:</label>
+            <input
+              type="text"
+              [(ngModel)]="domicilioProcesal"
+              placeholder="Dirección o Casilla Judicial"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-nav-buttons">
+            <button type="button" class="btn-pj-nav" (click)="limpiarAlertas(); paso = 2">
+              Regresar <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button type="button" class="btn-pj-nav" (click)="irAPaso4()">
+              Siguiente <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PASO 4: DATOS DEL EXPEDIENTE                                    -->
+        <!-- =============================================================== -->
+        <div class="pj-step-body fade-in" *ngIf="paso === 4 && conectado">
+          <h2 class="pj-form-title">Datos del expediente</h2>
+          <p class="pj-required-note">* Campo Obligatorio</p>
+
+          <!-- Opción 1: Ingresar Número y Año -->
+          <div class="pj-field-group" *ngIf="!modoExpedienteManual">
+            <label class="pj-label-inline">
+              <span>Número Expediente: <span class="req">(*)</span></span>
+              <button
+                type="button"
+                class="btn-toggle-manual"
+                (click)="alternarModoExpedienteManual()"
+                title="Cambiar a formulario de código completo"
+              >
+                <i class="fa-solid fa-pen-to-square"></i> Ingresar código completo
+              </button>
+            </label>
+
+            <div class="pj-two-cols">
+              <div>
+                <input
+                  type="text"
+                  [(ngModel)]="numeroExpedienteCorto"
+                  placeholder="Número (Ej: 178)"
+                  class="pj-input"
+                />
+              </div>
+              <div>
+                <select [(ngModel)]="anioExpediente" class="pj-select">
+                  <option value="">-- Año --</option>
+                  <option *ngFor="let a of aniosDisponibles" [value]="a">{{ a }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opción 2: Ingresar Solo Código Completo -->
+          <div class="pj-field-group" *ngIf="modoExpedienteManual">
+            <label class="pj-label-inline">
+              <span>Código Completo: <span class="req">(*)</span></span>
+              <button
+                type="button"
+                class="btn-toggle-manual"
+                (click)="alternarModoExpedienteManual()"
+                title="Cambiar a formulario de número y año"
+              >
+                <i class="fa-solid fa-hashtag"></i> Ingresar número y año
+              </button>
+            </label>
+            <input
+              type="text"
+              [(ngModel)]="numeroExpedienteCompleto"
+              placeholder="Ej: 00215-2021-0-1601-JR-PE-01"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Demandante/Agraviado: <span class="req">(*)</span></label>
+            <input
+              type="text"
+              [(ngModel)]="demandante"
+              placeholder="Nombres y apellidos o entidad demandante"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Demandado/Inculpado: <span class="req">(*)</span></label>
+            <input
+              type="text"
+              [(ngModel)]="demandado"
+              placeholder="Nombres y apellidos o entidad demandada"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Materia/Delito: <span class="req">(*)</span></label>
+            <input
+              type="text"
+              [(ngModel)]="materiaDelito"
+              placeholder="Ej. ACCION DE CUMPLIMIENTO / ALIMENTOS"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-field-group">
+            <label>Juzgado/Instancia: <span class="req">(*)</span></label>
+            <input
+              type="text"
+              [(ngModel)]="juzgadoInstancia"
+              placeholder="Ej. 1° JUZGADO PENAL / JUZGADO CIVIL"
+              class="pj-input"
+            />
+          </div>
+
+          <div class="pj-nav-buttons">
+            <button type="button" class="btn-pj-nav" (click)="limpiarAlertas(); paso = 3">
+              Regresar <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button type="button" class="btn-pj-nav" (click)="irAPaso5()">
+              Siguiente <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PASO 5: ADJUNTAR TASA(S) JUDICIAL(ES) Y OTROS DOCUMENTOS (P.10) -->
+        <!-- =============================================================== -->
+        <div class="pj-step-body fade-in" *ngIf="paso === 5 && conectado">
+          <h2 class="pj-form-title">Adjuntar Tasa(s) Judicial(es) y Otros Documentos</h2>
+          <p class="pj-required-note">* Campo Obligatorio</p>
+
+          <button type="button" class="btn-pj-add-docs" (click)="abrirModalAgregarDocumento()">
+            <i class="fa-regular fa-file-lines"></i> agregar documentos adjuntos
+          </button>
+
+          <div class="pj-adjuntos-table-wrap">
+            <table class="pj-adjuntos-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Quitar</th>
+                  <th>Archivo</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let doc of documentosAdjuntos; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn-pj-delete-doc"
+                      (click)="eliminarDocumentoAdjunto(doc.id)"
+                    >
+                      <i class="fa-solid fa-trash-can"></i> Eliminar
+                    </button>
+                  </td>
+                  <td class="td-filename" [title]="doc.nombreArchivo">{{ doc.nombreArchivo }}</td>
+                  <td>
+                    <input
+                      type="text"
+                      [(ngModel)]="doc.descripcion"
+                      class="pj-input-mini"
+                      placeholder="Ej. tasa, dni, carta poder"
+                    />
+                  </td>
+                </tr>
+                <tr *ngIf="documentosAdjuntos.length === 0">
+                  <td colspan="4" class="td-empty">
+                    Presione "agregar documentos adjuntos" para subir su Tasa Judicial (PDF o Imagen) y DNI.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pj-nav-buttons">
+            <button type="button" class="btn-pj-nav" (click)="limpiarAlertas(); paso = 4" [disabled]="registrando">
+              Regresar <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button
+              type="button"
+              class="btn-pj-nav register"
+              (click)="registrarSolicitudFinal()"
+              [disabled]="registrando"
+            >
+              <span>{{ registrando ? 'Registrando...' : 'Registrar' }}</span>
+              <i class="fa-regular fa-floppy-disk"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pj-red-alerts-stack" *ngIf="alertasValidacion.length > 0">
+        <div class="pj-red-alert fade-in" *ngFor="let msg of alertasValidacion; let idx = index">
+          <div class="alert-icon">
+            <i class="fa-solid fa-shield-exclamation"></i>
+          </div>
+          <div class="alert-text">
+            <strong>ALERTA</strong>
+            <p>{{ msg }}</p>
+          </div>
+          <button type="button" class="alert-close" (click)="alertasValidacion.splice(idx, 1)">
+            &times;
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL: AGREGAR DOCUMENTOS ADJUNTOS (Pág. 10, numeral 11)                -->
+<!-- ======================================================================= -->
+<div class="pj-modal-backdrop" *ngIf="mostrarModalAgregarAdjunto" (click)="mostrarModalAgregarAdjunto = false">
+  <div class="pj-add-doc-dialog fade-in" (click)="$event.stopPropagation()">
+    <div class="pj-add-doc-header">
+      <span>Agregar documentos adjuntos</span>
+      <button type="button" (click)="mostrarModalAgregarAdjunto = false">&times;</button>
+    </div>
+    <div class="pj-add-doc-body">
+      <div class="doc-field">
+        <label>Naturaleza del documento:</label>
+        <select [(ngModel)]="tipoAdjuntoTemp" class="doc-select">
+          <option value="TASA">TASA JUDICIAL (PAGO BANCO DE LA NACIÓN)</option>
+          <option value="DNI">DNI DEL SOLICITANTE (FOTO / PDF AMBOS LADOS)</option>
+          <option value="EXPEDIENTE">CARGO / REFERENCIA DE EXPEDIENTE</option>
+          <option value="OTRO">OTRO DOCUMENTO (CARTA PODER, ANEXO, ETC.)</option>
+        </select>
+      </div>
+
+      <div class="doc-field">
+        <label>Elije tu fichero (PDF o Imagen):</label>
+        <div class="doc-file-box">
+          <input type="file" accept=".pdf,image/*" (change)="onFileModalChange($event)" />
+        </div>
+      </div>
+
+      <div class="doc-field">
+        <label>Escribe una descripción del fichero:</label>
+        <input
+          type="text"
+          [(ngModel)]="descripcionAdjuntoTemp"
+          placeholder="Por ejm: tasa, DNI, carta poder, etc."
+          class="doc-input"
+        />
+      </div>
+    </div>
+    <div class="pj-add-doc-footer">
+      <button
+        type="button"
+        class="btn-confirm-fichero"
+        [disabled]="!archivoSeleccionadoTemp"
+        (click)="confirmarAgregarFichero()"
+      >
+        <i class="fa-solid fa-check"></i> Agregar Fichero
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- ALERTA VERDE: SOLICITUD REGISTRADA (Pág. 11, numeral 12)                -->
+<!-- ======================================================================= -->
+<div class="pj-modal-backdrop" *ngIf="mostrarAlertaSolicitudRegistrada">
+  <div class="pj-alert-window fade-in">
+    <div class="pj-alert-win-titlebar">
+      <span>Alerta</span>
+      <button type="button" (click)="cerrarAlertaYVerPdf()">&times;</button>
+    </div>
+    <div class="pj-alert-win-content success" (click)="cerrarAlertaYVerPdf()">
+      <div class="win-icon-success">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h4>SOLICITUD REGISTRADA</h4>
+      <p>ESPERE MIENTRAS GENERA SU CONSTANCIA</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- VISOR DE CONSTANCIA DE SOLICITUD EN PDF (Pág. 11, numeral 13)           -->
+<!-- ======================================================================= -->
+<app-pdf-viewer-modal
+  *ngIf="mostrarVisorPdf && solicitudRecienRegistrada"
+  [solicitud]="solicitudRecienRegistrada"
+  (cerrar)="finalizarYReiniciarFormulario()"
+></app-pdf-viewer-modal>
