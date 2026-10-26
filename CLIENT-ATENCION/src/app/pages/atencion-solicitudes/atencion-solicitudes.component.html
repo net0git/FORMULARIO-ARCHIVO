@@ -990,31 +990,31 @@
             <i class="fa-solid fa-magnifying-glass" *ngIf="!buscandoEnArchivo"></i>
             {{ buscandoEnArchivo ? 'Buscando...' : 'Consultar' }}
           </button>
+        </div>
 
-          <!-- Etiquetas de Coincidencias de la Solicitud (al costado de Consultar) -->
-          <div class="contenedor-etiquetas-coincidencias" *ngIf="filtrosCoincidencias.length > 0">
-            <span class="label-coincidencias">
-              <i class="fa-solid fa-tags"></i> Coincidencias:
-            </span>
-            <div class="tags-coincidencias-list">
-              <ng-container *ngFor="let f of filtrosCoincidencias">
-                <span class="tag-coincidencia" *ngIf="f.activo" [title]="f.clave + ': ' + f.valor">
-                  <strong>{{ f.clave }}:</strong> {{ f.valor }}
-                  <button type="button" class="btn-quitar-tag" (click)="eliminarFiltroCoincidencia(f)" title="Eliminar coincidencia">
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </span>
-              </ng-container>
-              <button
-                type="button"
-                class="btn-restaurar-tags"
-                *ngIf="filtrosCoincidencias.length > 0"
-                (click)="restaurarTodosLosFiltros()"
-                title="Restaurar todos los filtros de coincidencias"
-              >
-                <i class="fa-solid fa-rotate-left"></i>
-              </button>
-            </div>
+        <!-- Etiquetas de Coincidencias de la Solicitud (debajo del formulario de consulta) -->
+        <div class="contenedor-etiquetas-coincidencias" *ngIf="filtrosCoincidencias.length > 0">
+          <span class="label-coincidencias">
+            <i class="fa-solid fa-filter"></i> Coincidencias por datos del expediente:
+          </span>
+          <div class="tags-coincidencias-list">
+            <ng-container *ngFor="let f of filtrosCoincidencias">
+              <span class="tag-coincidencia" *ngIf="f.activo" [title]="f.clave + ': ' + f.valor">
+                <strong>{{ f.clave }}:</strong> {{ f.valor }}
+                <button type="button" class="btn-quitar-tag" (click)="eliminarFiltroCoincidencia(f)" title="Eliminar coincidencia">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </span>
+            </ng-container>
+            <button
+              type="button"
+              class="btn-restaurar-tags"
+              *ngIf="filtrosCoincidencias.length > 0"
+              (click)="restaurarTodosLosFiltros()"
+              title="Restaurar todos los filtros de coincidencias"
+            >
+              <i class="fa-solid fa-rotate-left"></i> Restaurar filtros
+            </button>
           </div>
         </div>
 
