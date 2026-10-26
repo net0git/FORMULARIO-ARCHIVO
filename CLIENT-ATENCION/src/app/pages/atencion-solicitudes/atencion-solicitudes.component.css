@@ -831,3 +831,350 @@
 /* Icono de ubicación: expediente con lupa */
 .icono-ubicacion { position: relative; display: inline-block; }
 .icono-ubicacion .lupa-sobre-expediente { position: absolute; right: -5px; bottom: -3px; font-size: 0.6em; background: #5a6268; border-radius: 50%; padding: 1px; }
+
+/* ========================================================================= */
+/* ESTILOS: BÚSQUEDA Y TARJETAS ARCHIVO CENTRAL EN MODAL UBICACIÓN           */
+/* ========================================================================= */
+.admin-modal-dialog.modal-ubicacion-custom {
+  max-width: 820px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal-dialog.modal-ubicacion-custom .admin-modal-body {
+  overflow-y: auto;
+  max-height: calc(90vh - 70px);
+  padding: 16px 20px;
+}
+
+.consulta-archivo-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.consulta-archivo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.consulta-archivo-header i {
+  color: #0284c7;
+}
+
+.consulta-archivo-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.consulta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.consulta-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.consulta-field input {
+  width: 110px;
+  padding: 6px 10px;
+  font-size: 0.88rem;
+}
+
+.btn-buscar-archivo {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+  height: 35px;
+}
+
+.btn-buscar-archivo:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.btn-buscar-archivo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.consulta-alerta-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.consulta-resultados-container {
+  margin-top: 12px;
+}
+
+.consulta-resultados-count {
+  font-size: 0.82rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.tarjetas-expedientes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tarjeta-expediente {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.tarjeta-expediente:hover {
+  border-color: #0284c7;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tarjeta-expediente.seleccionada {
+  border: 2px solid #0284c7;
+  background: #f0f9ff;
+}
+
+.tarjeta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.tarjeta-nro-exp {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.tarjeta-badge {
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.tarjeta-body {
+  font-size: 0.78rem;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.tarjeta-linea {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-bottom: 6px;
+  color: #475569;
+}
+
+.tarjeta-linea i {
+  margin-top: 2px;
+  color: #64748b;
+}
+
+.tarjeta-ubicacion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.tag-ubi {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  color: #1e293b;
+}
+
+.tag-local {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.tarjeta-partes {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.parte-item {
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.parte-rol {
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.parte-nombre {
+  font-size: 0.74rem;
+}
+
+.partes-mas {
+  color: #0284c7;
+  font-size: 0.7rem;
+  display: block;
+}
+
+.tarjeta-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-tarjeta-select {
+  flex: 1;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-tarjeta-select:hover {
+  background: #059669;
+}
+
+.btn-tarjeta-detalle {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.btn-tarjeta-detalle:hover {
+  background: #e2e8f0;
+}
+
+/* Detalle expandido */
+.expediente-detalle-completo {
+  background: #ffffff;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 10px 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.detalle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.detalle-header h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.btn-cerrar-mini {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+
+.detalle-partes-todas {
+  font-size: 0.8rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 6px;
+}
+
+.detalle-partes-todas ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 4px 0 0 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.detalle-partes-todas li {
+  padding: 2px 0;
+}
+
+.badge-rol {
+  display: inline-block;
+  background: #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #334155;
+  margin-right: 6px;
+}

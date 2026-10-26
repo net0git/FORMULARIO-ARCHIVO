@@ -946,13 +946,148 @@
 <!-- MODAL 5: UBICACIÓN FÍSICA DE EXPEDIENTES (Págs. 19 y 20 del Manual)     -->
 <!-- ======================================================================= -->
 <div class="admin-modal-overlay" *ngIf="mostrarModalUbicacion && solicitudActiva" (click)="mostrarModalUbicacion = false">
-  <div class="admin-modal-dialog medium fade-in" (click)="$event.stopPropagation()">
+  <div class="admin-modal-dialog medium fade-in modal-ubicacion-custom" (click)="$event.stopPropagation()">
     <div class="admin-modal-header">
       <h3>Ubicación Expediente</h3>
       <button type="button" (click)="mostrarModalUbicacion = false">&times;</button>
     </div>
 
     <div class="admin-modal-body">
+      <!-- Buscador en Archivo Central -->
+      <div class="consulta-archivo-box">
+        <div class="consulta-archivo-header">
+          <i class="fa-solid fa-magnifying-glass-location"></i>
+          <strong>Búsqueda en Archivo Central</strong>
+        </div>
+        <div class="consulta-archivo-form">
+          <div class="consulta-field">
+            <label>N° Exp:</label>
+            <input
+              type="text"
+              [(ngModel)]="consultaNumero"
+              placeholder="Ej: 123"
+              class="modal-input"
+              (keyup.enter)="buscarEnArchivoCentral()"
+            />
+          </div>
+          <div class="consulta-field">
+            <label>Año:</label>
+            <input
+              type="text"
+              [(ngModel)]="consultaAnio"
+              placeholder="Ej: 2024"
+              class="modal-input"
+              (keyup.enter)="buscarEnArchivoCentral()"
+            />
+          </div>
+          <button
+            type="button"
+            class="btn-buscar-archivo"
+            [disabled]="buscandoEnArchivo"
+            (click)="buscarEnArchivoCentral()"
+          >
+            <i class="fa-solid fa-spinner fa-spin" *ngIf="buscandoEnArchivo"></i>
+            <i class="fa-solid fa-magnifying-glass" *ngIf="!buscandoEnArchivo"></i>
+            {{ buscandoEnArchivo ? 'Buscando...' : 'Consultar' }}
+          </button>
+        </div>
+
+        <div class="consulta-alerta-error" *ngIf="mensajeErrorBusquedaArchivo">
+          <i class="fa-solid fa-circle-exclamation"></i> {{ mensajeErrorBusquedaArchivo }}
+        </div>
+
+        <!-- Tarjetas de resultados -->
+        <div class="consulta-resultados-container" *ngIf="resultadosArchivoCentral.length > 0">
+          <div class="consulta-resultados-count">
+            Se encontraron <strong>{{ resultadosArchivoCentral.length }}</strong> coincidencia(s):
+          </div>
+
+          <div class="tarjetas-expedientes-grid">
+            <div
+              class="tarjeta-expediente"
+              *ngFor="let item of resultadosArchivoCentral"
+              [class.seleccionada]="expedienteSeleccionadoDetalle === item"
+            >
+              <div class="tarjeta-header">
+                <span class="tarjeta-nro-exp">{{ item.nro_formateado || item.codg_expdte }}</span>
+                <span class="tarjeta-badge" *ngIf="item.codg_paquet">Paquete: {{ item.codg_paquet }}</span>
+              </div>
+
+              <div class="tarjeta-body">
+                <div class="tarjeta-linea">
+                  <i class="fa-solid fa-building-columns"></i>
+                  <span>{{ item.desc_instan || 'Sin Juzgado/Instancia' }}</span>
+                </div>
+
+                <div class="tarjeta-ubicacion-tags">
+                  <span class="tag-ubi" *ngIf="item.codg_anaqul"><strong>An:</strong> {{ item.codg_anaqul }}</span>
+                  <span class="tag-ubi" *ngIf="item.codg_fila"><strong>Fil:</strong> {{ item.codg_fila }}</span>
+                  <span class="tag-ubi" *ngIf="item.codg_column"><strong>Col:</strong> {{ item.codg_column }}</span>
+                  <span class="tag-ubi" *ngIf="item.codg_paquet"><strong>Paq:</strong> {{ item.codg_paquet }}</span>
+                  <span class="tag-ubi tag-local" *ngIf="item.codg_local">Local {{ item.codg_local }}</span>
+                </div>
+
+                <div class="tarjeta-partes" *ngIf="item.partes && item.partes.length > 0">
+                  <div class="parte-item" *ngFor="let p of item.partes.slice(0, 2)">
+                    <small class="parte-rol">{{ p.tipo_parte }}:</small>
+                    <span class="parte-nombre">{{ p.nombre_parte }}</span>
+                  </div>
+                  <small *ngIf="item.partes.length > 2" class="partes-mas">+{{ item.partes.length - 2 }} partes más...</small>
+                </div>
+              </div>
+
+              <div class="tarjeta-footer">
+                <button
+                  type="button"
+                  class="btn-tarjeta-detalle"
+                  (click)="verDetalleExpediente(item)"
+                  title="Ver toda la información del expediente"
+                >
+                  <i class="fa-solid fa-circle-info"></i> Detalle
+                </button>
+                <button
+                  type="button"
+                  class="btn-tarjeta-select"
+                  (click)="seleccionarExpedienteArchivo(item)"
+                  title="Cargar estos datos en la ubicación"
+                >
+                  <i class="fa-solid fa-check"></i> Seleccionar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detalle emergente/expandido si selecciona 'Detalle' -->
+      <div class="expediente-detalle-completo" *ngIf="expedienteSeleccionadoDetalle">
+        <div class="detalle-header">
+          <h4><i class="fa-solid fa-file-invoice"></i> Detalle del Expediente Seleccionado</h4>
+          <button type="button" class="btn-cerrar-mini" (click)="expedienteSeleccionadoDetalle = null">&times;</button>
+        </div>
+        <div class="detalle-grid">
+          <div><strong>Expediente Formateado:</strong> {{ expedienteSeleccionadoDetalle.nro_formateado }}</div>
+          <div><strong>Código Origen:</strong> {{ expedienteSeleccionadoDetalle.codg_expdte_origen }}</div>
+          <div><strong>Instancia:</strong> {{ expedienteSeleccionadoDetalle.desc_instan }}</div>
+          <div><strong>Local:</strong> {{ expedienteSeleccionadoDetalle.codg_local }}</div>
+          <div><strong>Anaquel:</strong> {{ expedienteSeleccionadoDetalle.codg_anaqul || '-' }}</div>
+          <div><strong>Fila:</strong> {{ expedienteSeleccionadoDetalle.codg_fila || '-' }}</div>
+          <div><strong>Columna:</strong> {{ expedienteSeleccionadoDetalle.codg_column || '-' }}</div>
+          <div><strong>Paquete:</strong> {{ expedienteSeleccionadoDetalle.codg_paquet || '-' }}</div>
+        </div>
+        <div class="detalle-partes-todas" *ngIf="expedienteSeleccionadoDetalle.partes && expedienteSeleccionadoDetalle.partes.length > 0">
+          <strong>Partes Procesales:</strong>
+          <ul>
+            <li *ngFor="let p of expedienteSeleccionadoDetalle.partes">
+              <span class="badge-rol">{{ p.tipo_parte }}</span> {{ p.nombre_parte }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 18px 0;" />
+
+      <!-- Formulario estándar de guardado de ubicación -->
       <div class="modal-field">
         <label>Ubicación:</label>
         <input type="text" [(ngModel)]="ubicacionForm.ubicacion" class="modal-input" />

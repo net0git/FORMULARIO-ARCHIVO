@@ -12,6 +12,7 @@ import {
 } from '../../models/archivo.models';
 import { ArchivoService } from '../../services/archivo.service';
 import { PdfConstanciaService } from '../../services/pdf-constancia.service';
+import { ConsultaArchivoService, ExpedienteArchivoCentral } from '../../services/consulta-archivo.service';
 import { PdfViewerModalComponent } from '../../components/pdf-viewer-modal/pdf-viewer-modal.component';
 import { GoogleSheetModalComponent } from '../../components/google-sheet-modal/google-sheet-modal.component';
 
@@ -110,6 +111,14 @@ export class AtencionSolicitudesComponent implements OnInit {
     paquete: ''
   };
 
+  // Consulta al Archivo Central
+  consultaNumero = '';
+  consultaAnio = '';
+  buscandoEnArchivo = false;
+  resultadosArchivoCentral: ExpedienteArchivoCentral[] = [];
+  expedienteSeleccionadoDetalle: ExpedienteArchivoCentral | null = null;
+  mensajeErrorBusquedaArchivo = '';
+
   // 6. Modal Constancia PDF y Visor de Documentos Adjuntos (Pág. 20 y 21)
   mostrarModalPdf = false;
   documentoVisorActivo: DocumentoAdjunto | null = null;
@@ -128,6 +137,7 @@ export class AtencionSolicitudesComponent implements OnInit {
   constructor(
     public archivoService: ArchivoService,
     private pdfService: PdfConstanciaService,
+    private consultaArchivoService: ConsultaArchivoService,
     private router: Router
   ) {}
 
@@ -523,13 +533,59 @@ export class AtencionSolicitudesComponent implements OnInit {
   abrirUbicacionExpediente(sol: SolicitudArchivo): void {
     this.solicitudActiva = sol;
     this.ubicacionForm = {
-      ubicacion: sol.ubicacion || '',
-      anaquel: sol.anaquel || '',
-      fila: sol.fila || '',
-      columna: sol.columna || '',
-      paquete: sol.paquete || ''
+      ubicacion: '',
+      anaquel: '',
+      fila: '',
+      columna: '',
+      paquete: ''
     };
+
+    this.consultaNumero = '';
+    this.consultaAnio = '';
+    this.resultadosArchivoCentral = [];
+    this.expedienteSeleccionadoDetalle = null;
+    this.mensajeErrorBusquedaArchivo = '';
+
     this.mostrarModalUbicacion = true;
+  }
+
+  async buscarEnArchivoCentral(): Promise<void> {
+    if (!this.consultaNumero.trim() || !this.consultaAnio.trim()) {
+      this.mensajeErrorBusquedaArchivo = 'Ingrese el número y año del expediente a buscar.';
+      return;
+    }
+
+    this.buscandoEnArchivo = true;
+    this.mensajeErrorBusquedaArchivo = '';
+    this.resultadosArchivoCentral = [];
+
+    try {
+      const res = await this.consultaArchivoService.buscarExpedientes(
+        this.consultaNumero.trim(),
+        this.consultaAnio.trim()
+      );
+      this.resultadosArchivoCentral = res.results || [];
+      if (this.resultadosArchivoCentral.length === 0) {
+        this.mensajeErrorBusquedaArchivo = 'No se encontraron expedientes con los criterios especificados.';
+      }
+    } catch (err) {
+      this.mensajeErrorBusquedaArchivo = 'Error al consultar el Archivo Central: ' + ((err as Error)?.message || 'Sin conexión');
+    } finally {
+      this.buscandoEnArchivo = false;
+    }
+  }
+
+  seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral): void {
+    this.ubicacionForm.ubicacion = item.desc_instan ? `${item.desc_instan} (Local ${item.codg_local || ''})`.trim() : (item.codg_local ? `Local ${item.codg_local}` : '');
+    this.ubicacionForm.anaquel = item.codg_anaqul || '';
+    this.ubicacionForm.fila = item.codg_fila || '';
+    this.ubicacionForm.columna = item.codg_column || '';
+    this.ubicacionForm.paquete = item.codg_paquet || '';
+    this.expedienteSeleccionadoDetalle = item;
+  }
+
+  verDetalleExpediente(item: ExpedienteArchivoCentral): void {
+    this.expedienteSeleccionadoDetalle = item;
   }
 
   async guardarUbicacionExpediente(): Promise<void> {
