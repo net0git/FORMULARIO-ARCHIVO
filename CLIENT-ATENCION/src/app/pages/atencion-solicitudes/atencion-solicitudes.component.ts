@@ -115,9 +115,13 @@ export class AtencionSolicitudesComponent implements OnInit {
   consultaNumero = '';
   consultaAnio = '';
   buscandoEnArchivo = false;
+  todosResultadosArchivoCentral: ExpedienteArchivoCentral[] = [];
   resultadosArchivoCentral: ExpedienteArchivoCentral[] = [];
   expedienteSeleccionadoDetalle: ExpedienteArchivoCentral | null = null;
   mensajeErrorBusquedaArchivo = '';
+
+  // Filtros automáticos extraídos de "Datos del expediente"
+  filtrosCoincidencias: { clave: string; valor: string; activo: boolean }[] = [];
 
   // 6. Modal Constancia PDF y Visor de Documentos Adjuntos (Pág. 20 y 21)
   mostrarModalPdf = false;
@@ -542,7 +546,9 @@ export class AtencionSolicitudesComponent implements OnInit {
 
     this.consultaNumero = '';
     this.consultaAnio = '';
+    this.todosResultadosArchivoCentral = [];
     this.resultadosArchivoCentral = [];
+    this.filtrosCoincidencias = [];
     this.expedienteSeleccionadoDetalle = null;
     this.mensajeErrorBusquedaArchivo = '';
 
@@ -557,22 +563,129 @@ export class AtencionSolicitudesComponent implements OnInit {
 
     this.buscandoEnArchivo = true;
     this.mensajeErrorBusquedaArchivo = '';
+    this.todosResultadosArchivoCentral = [];
     this.resultadosArchivoCentral = [];
+    this.filtrosCoincidencias = [];
 
     try {
       const res = await this.consultaArchivoService.buscarExpedientes(
         this.consultaNumero.trim(),
         this.consultaAnio.trim()
       );
-      this.resultadosArchivoCentral = res.results || [];
-      if (this.resultadosArchivoCentral.length === 0) {
+      this.todosResultadosArchivoCentral = res.results || [];
+      if (this.todosResultadosArchivoCentral.length === 0) {
         this.mensajeErrorBusquedaArchivo = 'No se encontraron expedientes con los criterios especificados.';
+        this.resultadosArchivoCentral = [];
+      } else {
+        this.generarFiltrosDesdeSolicitud();
+        this.aplicarFiltrosCoincidencias();
       }
     } catch (err) {
       this.mensajeErrorBusquedaArchivo = 'Error al consultar el Archivo Central: ' + ((err as Error)?.message || 'Sin conexión');
     } finally {
       this.buscandoEnArchivo = false;
     }
+  }
+
+  /**
+   * Genera las etiquetas de coincidencias basadas en los campos de "Datos del expediente" de la solicitud
+   */
+  private generarFiltrosDesdeSolicitud(): void {
+    if (!this.solicitudActiva) return;
+    const filtros: { clave: string; valor: string; activo: boolean }[] = [];
+
+    const normalizar = (txt?: string) => (txt || '').trim();
+
+    // 1. Demandante / Agraviado
+    const dte = normalizar(this.solicitudActiva.demandante);
+    if (dte && dte !== '-') {
+      filtros.push({ clave: 'Demandante', valor: dte, activo: true });
+    }
+
+    // 2. Demandado / Inculpado
+    const ddo = normalizar(this.solicitudActiva.demandado);
+    if (ddo && ddo !== '-') {
+      filtros.push({ clave: 'Demandado', valor: ddo, activo: true });
+    }
+
+    // 3. Juzgado / Instancia
+    const juz = normalizar(this.solicitudActiva.juzgadoEmisor);
+    if (juz && juz !== '-') {
+      filtros.push({ clave: 'Juzgado', valor: juz, activo: true });
+    }
+
+    // 4. Materia / Delito
+    const mat = normalizar(this.solicitudActiva.materiaDelito);
+    if (mat && mat !== '-') {
+      filtros.push({ clave: 'Materia', valor: mat, activo: true });
+    }
+
+    // 5. Código Completo
+    const cod = normalizar(this.solicitudActiva.codigoCompletoExpediente);
+    if (cod && cod !== '-' && cod !== this.solicitudActiva.nroExpediente) {
+      filtros.push({ clave: 'Código', valor: cod, activo: true });
+    }
+
+    this.filtrosCoincidencias = filtros;
+  }
+
+  /**
+   * Filtra los resultados del Archivo Central según las etiquetas activas.
+   * Si no coincide ninguno con todos los filtros activos, o si se eliminan etiquetas, se recalcula dinámicamente.
+   */
+  aplicarFiltrosCoincidencias(): void {
+    const filtrosActivos = this.filtrosCoincidencias.filter((f) => f.activo);
+
+    if (filtrosActivos.length === 0) {
+      this.resultadosArchivoCentral = [...this.todosResultadosArchivoCentral];
+      return;
+    }
+
+    const limpiarTexto = (t: string) =>
+      (t || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, ' ')
+        .trim();
+
+    // Filtro progresivo / coincidencia
+    this.resultadosArchivoCentral = this.todosResultadosArchivoCentral.filter((exp) => {
+      // Texto completo del expediente para búsqueda amplia
+      const textoPartes = (exp.partes || []).map((p) => `${p.tipo_parte} ${p.nombre_parte}`).join(' ');
+      const textoExp = `${exp.nro_formateado} ${exp.desc_instan} ${exp.codg_expdte} ${exp.codg_expdte_origen} ${textoPartes}`;
+      const textoLimpio = limpiarTexto(textoExp);
+
+      // Comprobamos si cumple con los filtros activos
+      // Una coincidencia es positiva si al menos una palabra clave significativa (>3 letras) del filtro está en el expediente
+      return filtrosActivos.some((f) => {
+        const palabras = limpiarTexto(f.valor)
+          .split(/\s+/)
+          .filter((p) => p.length >= 3 && !['sede', 'juzgado', 'sala', 'civil', 'penal', 'paz', 'letrado', 'del', 'los', 'las', 'por', 'con'].includes(p));
+
+        if (palabras.length === 0) {
+          return textoLimpio.includes(limpiarTexto(f.valor));
+        }
+
+        // Si contiene alguna palabra clave del demandante, demandado o juzgado
+        return palabras.some((palabra) => textoLimpio.includes(palabra));
+      });
+    });
+
+    // Si después de filtrar no queda ninguno, mostramos todos para no bloquear al usuario pero dejamos las etiquetas
+    if (this.resultadosArchivoCentral.length === 0 && this.todosResultadosArchivoCentral.length > 0) {
+      this.resultadosArchivoCentral = [...this.todosResultadosArchivoCentral];
+    }
+  }
+
+  eliminarFiltroCoincidencia(filtro: { clave: string; valor: string; activo: boolean }): void {
+    filtro.activo = false;
+    this.aplicarFiltrosCoincidencias();
+  }
+
+  restaurarTodosLosFiltros(): void {
+    this.filtrosCoincidencias.forEach((f) => (f.activo = true));
+    this.aplicarFiltrosCoincidencias();
   }
 
   seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral): void {

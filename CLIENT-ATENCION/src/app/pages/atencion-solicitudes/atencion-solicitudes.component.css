@@ -1178,3 +1178,90 @@
   color: #334155;
   margin-right: 6px;
 }
+
+/* ========================================================================= */
+/* ETIQUETAS DE COINCIDENCIAS (AL COSTADO DEL BOTÓN CONSULTAR)              */
+/* ========================================================================= */
+.contenedor-etiquetas-coincidencias {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 250px;
+  padding-left: 8px;
+  border-left: 1px dashed #cbd5e1;
+}
+
+.label-coincidencias {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tags-coincidencias-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tag-coincidencia {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 3px 8px 3px 10px;
+  font-size: 0.74rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.tag-coincidencia strong {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.btn-quitar-tag {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.btn-quitar-tag:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.btn-restaurar-tags {
+  background: transparent;
+  border: 1px dashed #94a3b8;
+  color: #475569;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  transition: all 0.2s;
+}
+
+.btn-restaurar-tags:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
