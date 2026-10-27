@@ -42,7 +42,7 @@ import { PDFDocument } from 'pdf-lib';
               type="button"
               class="pdf-action-btn email-btn"
               [class.sent]="correoEnviado"
-              *ngIf="!documento && !modoDocs && solicitud?.email"
+              *ngIf="false"
               [disabled]="enviandoCorreo"
               (click)="enviarAlCorreo()"
               [title]="'Enviar constancia en PDF a: ' + solicitud?.email"
@@ -1021,20 +1021,80 @@ export class PdfViewerModalComponent implements OnChanges {
 
   imprimir(): void {
     if (this.documento) {
-      if (this.documento.url) {
-        window.open(this.documento.url, '_blank');
-        return;
-      }
       if (this.documento.base64Data) {
         this.imprimirBase64(this.documento.base64Data, this.documento.mimeType);
+        return;
+      }
+      if (this.documento.url) {
+        this.imprimirUrlDirecta(this.documento.url);
         return;
       }
     }
     if (!this.solicitud) return;
     const doc = this.pdfService.generarDocumentoPdf(this.solicitud);
-    doc.autoPrint();
-    const blobUrl = doc.output('bloburl');
-    window.open(blobUrl, '_blank');
+    const blob = doc.output('blob');
+    this.imprimirBlobDirecto(blob);
+  }
+
+  /** Abre la impresora directamente mediante un iframe oculto para una URL */
+  private imprimirUrlDirecta(url: string): void {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = url;
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch {
+            // Si hay restricción cross-origin en el iframe
+            window.print();
+          }
+        }, 500);
+      };
+      document.body.appendChild(iframe);
+      setTimeout(() => iframe.remove(), 120000);
+    } catch {
+      window.print();
+    }
+  }
+
+  /** Abre la impresora directamente mediante un iframe oculto a partir de un Blob */
+  private imprimirBlobDirecto(blob: Blob): void {
+    try {
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = blobUrl;
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch {
+            window.print();
+          }
+        }, 500);
+      };
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        iframe.remove();
+        URL.revokeObjectURL(blobUrl);
+      }, 120000);
+    } catch {
+      window.print();
+    }
   }
 
   /** Abre el cuadro de impresión del sistema (impresoras instaladas) para un PDF/imagen en base64. */

@@ -363,12 +363,14 @@ export class AtencionSolicitudesComponent implements OnInit {
     if (ev.accion === 'REGISTRO DE SOLICITUD') {
       this.solicitudActiva = sol;
       this.documentoVisorActivo = null;
+      this.modoDocsEventos = false;
       this.mostrarModalPdf = true;
       return;
     }
     if (ev.documento) {
       this.solicitudActiva = sol;
       this.documentoVisorActivo = ev.documento;
+      this.modoDocsEventos = false;
       this.mostrarModalPdf = true;
     }
   }

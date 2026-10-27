@@ -39,7 +39,7 @@ export class PdfConstanciaService {
       46.5
     );
 
-    let y = 56;
+    let y = 50;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(12);
@@ -62,7 +62,7 @@ export class PdfConstanciaService {
       162
     );
     doc.text(dj2, 26, y);
-    y += dj2.length * 4.2 + 6;
+    y += dj2.length * 3.8 + 4;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(12);
@@ -184,7 +184,7 @@ export class PdfConstanciaService {
     doc.setTextColor(65, 65, 65);
     const lines = doc.splitTextToSize(String(valor || '-').toUpperCase(), 125);
     doc.text(lines, x + 36, y);
-    return y + Math.max(lines.length * 4.5, 5.2);
+    return y + Math.max(lines.length * 4.0, 4.6);
   }
 
   private dibujarLogoPJ(doc: jsPDF, x: number, y: number): void {
