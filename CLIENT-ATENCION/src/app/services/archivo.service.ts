@@ -134,7 +134,7 @@ export class ArchivoService {
 
   async cambiarEstado(idSolicitud: number, nuevoEstado: EstadoSolicitud): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
+    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
@@ -189,7 +189,7 @@ export class ArchivoService {
     documento?: DocumentoAdjunto | null
   ): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
+    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
@@ -247,15 +247,15 @@ export class ArchivoService {
     datosUbicacion: { ubicacion: string; anaquel: string; fila: string; columna: string; paquete: string }
   ): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
+    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
-    sol.ubicacion = (datosUbicacion.ubicacion || '').toUpperCase();
-    sol.anaquel = (datosUbicacion.anaquel || '').toUpperCase();
-    sol.fila = (datosUbicacion.fila || '').toUpperCase();
-    sol.columna = (datosUbicacion.columna || '').toUpperCase();
-    sol.paquete = (datosUbicacion.paquete || '').toUpperCase();
+    sol.ubicacion = (datosUbicacion.ubicacion || '').trim().toUpperCase();
+    sol.anaquel = (datosUbicacion.anaquel || '').trim().toUpperCase();
+    sol.fila = (datosUbicacion.fila || '').trim().toUpperCase();
+    sol.columna = (datosUbicacion.columna || '').trim().toUpperCase();
+    sol.paquete = (datosUbicacion.paquete || '').trim().toUpperCase();
 
     const ahora = this.formatearFechaHoraActual();
     const user = this.obtenerUsuarioSesion();
@@ -285,7 +285,11 @@ export class ArchivoService {
           body: JSON.stringify({
             action: 'actualizarUbicacion',
             idSolicitud: sol.idSolicitud,
-            ...datosUbicacion,
+            ubicacion: sol.ubicacion,
+            anaquel: sol.anaquel,
+            fila: sol.fila,
+            columna: sol.columna,
+            paquete: sol.paquete,
             usuario: user?.usuario || 'admin1',
             trabajador: user?.nombreCompleto || 'ADMINISTRADOR'
           })

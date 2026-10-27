@@ -156,7 +156,7 @@ export class AtencionSolicitudesComponent implements OnInit {
       this.todasLasSolicitudes = lista;
       this.aplicarFiltros();
       if (this.solicitudActiva) {
-        const actualizada = lista.find((s) => s.idSolicitud === this.solicitudActiva?.idSolicitud);
+        const actualizada = lista.find((s) => Number(s.idSolicitud) === Number(this.solicitudActiva?.idSolicitud));
         if (actualizada) {
           this.solicitudActiva = actualizada;
         }
@@ -539,15 +539,27 @@ export class AtencionSolicitudesComponent implements OnInit {
   abrirUbicacionExpediente(sol: SolicitudArchivo): void {
     this.solicitudActiva = sol;
     this.ubicacionForm = {
-      ubicacion: '',
-      anaquel: '',
-      fila: '',
-      columna: '',
-      paquete: ''
+      ubicacion: sol.ubicacion || '',
+      anaquel: sol.anaquel || '',
+      fila: sol.fila || '',
+      columna: sol.columna || '',
+      paquete: sol.paquete || ''
     };
 
-    this.consultaNumero = '';
-    this.consultaAnio = '';
+    let numExp = (sol.numeroExpedienteCorto || '').trim();
+    let anioExp = (sol.anioExpediente || '').trim();
+
+    if (!numExp || !anioExp) {
+      const expStr = sol.codigoCompletoExpediente || sol.nroExpediente || '';
+      const match = expStr.match(/(\d+)-(\d{4})/);
+      if (match) {
+        if (!numExp) numExp = String(parseInt(match[1], 10));
+        if (!anioExp) anioExp = match[2];
+      }
+    }
+
+    this.consultaNumero = numExp;
+    this.consultaAnio = anioExp;
     this.todosResultadosArchivoCentral = [];
     this.resultadosArchivoCentral = [];
     this.filtrosCoincidencias = [];
@@ -555,6 +567,10 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.mensajeErrorBusquedaArchivo = '';
 
     this.mostrarModalUbicacion = true;
+
+    if (this.consultaNumero && this.consultaAnio) {
+      this.buscarEnArchivoCentral();
+    }
   }
 
   async buscarEnArchivoCentral(): Promise<void> {
@@ -690,13 +706,17 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.aplicarFiltrosCoincidencias();
   }
 
-  seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral): void {
+  async seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral, autoGuardar: boolean = true): Promise<void> {
     this.ubicacionForm.ubicacion = item.desc_instan ? `${item.desc_instan} (Local ${item.codg_local || ''})`.trim() : (item.codg_local ? `Local ${item.codg_local}` : '');
     this.ubicacionForm.anaquel = item.codg_anaqul || '';
     this.ubicacionForm.fila = item.codg_fila || '';
     this.ubicacionForm.columna = item.codg_column || '';
     this.ubicacionForm.paquete = item.codg_paquet || '';
     this.expedienteSeleccionadoDetalle = item;
+
+    if (autoGuardar) {
+      await this.guardarUbicacionExpediente();
+    }
   }
 
   verDetalleExpediente(item: ExpedienteArchivoCentral): void {
@@ -705,9 +725,16 @@ export class AtencionSolicitudesComponent implements OnInit {
 
   async guardarUbicacionExpediente(): Promise<void> {
     if (!this.solicitudActiva) return;
+
+    this.solicitudActiva.ubicacion = (this.ubicacionForm.ubicacion || '').trim().toUpperCase();
+    this.solicitudActiva.anaquel = (this.ubicacionForm.anaquel || '').trim().toUpperCase();
+    this.solicitudActiva.fila = (this.ubicacionForm.fila || '').trim().toUpperCase();
+    this.solicitudActiva.columna = (this.ubicacionForm.columna || '').trim().toUpperCase();
+    this.solicitudActiva.paquete = (this.ubicacionForm.paquete || '').trim().toUpperCase();
+
     await this.archivoService.actualizarUbicacion(this.solicitudActiva.idSolicitud, this.ubicacionForm);
     this.mostrarModalUbicacion = false;
-    this.mostrarAlertaVerde('UBICACION REGISTRADA');
+    this.mostrarAlertaVerde('UBICACIÓN REGISTRADA');
   }
 
   // =========================================================================
