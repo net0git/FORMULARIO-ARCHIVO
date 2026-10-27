@@ -423,14 +423,15 @@ import { PDFDocument } from 'pdf-lib';
     .pdf-a4-page {
       background: #ffffff;
       width: 100%;
-      max-width: 680px;
-      min-height: 840px;
-      padding: 40px 48px 60px 48px;
-      margin-bottom: 50px;
+      max-width: 740px;
+      min-height: 1050px;
+      padding: 40px 48px 100px 48px;
+      margin-bottom: 60px;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
       color: #333;
-      height: fit-content;
+      height: auto;
       box-sizing: border-box;
+      flex-shrink: 0;
     }
     .a4-header {
       display: flex;
@@ -556,6 +557,7 @@ import { PDFDocument } from 'pdf-lib';
       align-items: center;
       justify-content: flex-start;
       gap: 24px;
+      padding-bottom: 120px;
     }
     .a4-events-table {
       width: 100%;
