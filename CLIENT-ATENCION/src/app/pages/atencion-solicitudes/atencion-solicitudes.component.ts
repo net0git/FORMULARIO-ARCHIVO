@@ -538,6 +538,15 @@ export class AtencionSolicitudesComponent implements OnInit {
   // =========================================================================
   abrirUbicacionExpediente(sol: SolicitudArchivo): void {
     this.solicitudActiva = sol;
+
+    const tieneRegistroGuardado = Boolean(
+      (sol.ubicacion && sol.ubicacion.trim()) ||
+      (sol.anaquel && sol.anaquel.trim()) ||
+      (sol.fila && sol.fila.trim()) ||
+      (sol.columna && sol.columna.trim()) ||
+      (sol.paquete && sol.paquete.trim())
+    );
+
     this.ubicacionForm = {
       ubicacion: sol.ubicacion || '',
       anaquel: sol.anaquel || '',
@@ -546,31 +555,39 @@ export class AtencionSolicitudesComponent implements OnInit {
       paquete: sol.paquete || ''
     };
 
-    let numExp = (sol.numeroExpedienteCorto || '').trim();
-    let anioExp = (sol.anioExpediente || '').trim();
-
-    if (!numExp || !anioExp) {
-      const expStr = sol.codigoCompletoExpediente || sol.nroExpediente || '';
-      const match = expStr.match(/(\d+)-(\d{4})/);
-      if (match) {
-        if (!numExp) numExp = String(parseInt(match[1], 10));
-        if (!anioExp) anioExp = match[2];
-      }
-    }
-
-    this.consultaNumero = numExp;
-    this.consultaAnio = anioExp;
     this.todosResultadosArchivoCentral = [];
     this.resultadosArchivoCentral = [];
     this.filtrosCoincidencias = [];
     this.expedienteSeleccionadoDetalle = null;
     this.mensajeErrorBusquedaArchivo = '';
 
-    this.mostrarModalUbicacion = true;
+    if (tieneRegistroGuardado) {
+      // Si ya existe registro guardado, el filtro de búsqueda y las coincidencias quedan limpios
+      this.consultaNumero = '';
+      this.consultaAnio = '';
+    } else {
+      // Si no existe registro guardado, precargar número y año para facilitar la búsqueda
+      let numExp = (sol.numeroExpedienteCorto || '').trim();
+      let anioExp = (sol.anioExpediente || '').trim();
 
-    if (this.consultaNumero && this.consultaAnio) {
-      this.buscarEnArchivoCentral();
+      if (!numExp || !anioExp) {
+        const expStr = sol.codigoCompletoExpediente || sol.nroExpediente || '';
+        const match = expStr.match(/(\d+)-(\d{4})/);
+        if (match) {
+          if (!numExp) numExp = String(parseInt(match[1], 10));
+          if (!anioExp) anioExp = match[2];
+        }
+      }
+
+      this.consultaNumero = numExp;
+      this.consultaAnio = anioExp;
+
+      if (this.consultaNumero && this.consultaAnio) {
+        this.buscarEnArchivoCentral();
+      }
     }
+
+    this.mostrarModalUbicacion = true;
   }
 
   async buscarEnArchivoCentral(): Promise<void> {
