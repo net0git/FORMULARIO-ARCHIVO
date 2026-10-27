@@ -394,7 +394,7 @@ import { PDFDocument } from 'pdf-lib';
     .pdf-canvas-bg {
       flex: 1;
       overflow-y: auto;
-      padding: 28px 16px;
+      padding: 28px 16px 80px 16px;
       display: flex;
       justify-content: center;
       background: #525659;
@@ -425,10 +425,12 @@ import { PDFDocument } from 'pdf-lib';
       width: 100%;
       max-width: 680px;
       min-height: 840px;
-      padding: 46px 52px;
+      padding: 40px 48px 60px 48px;
+      margin-bottom: 50px;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
       color: #333;
       height: fit-content;
+      box-sizing: border-box;
     }
     .a4-header {
       display: flex;
