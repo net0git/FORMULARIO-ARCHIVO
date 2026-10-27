@@ -422,14 +422,13 @@ import { PDFDocument } from 'pdf-lib';
     }
     .pdf-a4-page {
       background: #ffffff;
-      width: 100%;
-      max-width: 740px;
-      min-height: 1050px;
-      padding: 40px 48px 100px 48px;
-      margin-bottom: 60px;
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 210mm;
+      padding: 20mm 20mm 24mm 20mm;
+      margin: 0 auto 40px auto;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
       color: #333;
-      height: auto;
       box-sizing: border-box;
       flex-shrink: 0;
     }
@@ -437,7 +436,7 @@ import { PDFDocument } from 'pdf-lib';
       display: flex;
       align-items: center;
       gap: 28px;
-      margin-bottom: 18px;
+      margin-bottom: 12px;
     }
     .pj-brand {
       display: flex;
@@ -481,11 +480,11 @@ import { PDFDocument } from 'pdf-lib';
     .a4-quote {
       font-size: 11px;
       color: #666;
-      margin-bottom: 20px;
-      line-height: 1.5;
+      margin-bottom: 14px;
+      line-height: 1.4;
     }
     .a4-section {
-      margin-bottom: 18px;
+      margin-bottom: 12px;
     }
     .a4-section h3 {
       color: #a63429;
