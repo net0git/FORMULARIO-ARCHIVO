@@ -1000,7 +1000,9 @@
           <div class="tags-coincidencias-list">
             <ng-container *ngFor="let f of filtrosCoincidencias">
               <span class="tag-coincidencia" *ngIf="f.activo" [title]="f.clave + ': ' + f.valor">
-                <strong>{{ f.clave }}:</strong> {{ f.valor }}
+                <span class="tag-texto">
+                  <strong>{{ f.clave }}:</strong> {{ f.valor }}
+                </span>
                 <button type="button" class="btn-quitar-tag" (click)="eliminarFiltroCoincidencia(f)" title="Eliminar coincidencia">
                   <i class="fa-solid fa-xmark"></i>
                 </button>
