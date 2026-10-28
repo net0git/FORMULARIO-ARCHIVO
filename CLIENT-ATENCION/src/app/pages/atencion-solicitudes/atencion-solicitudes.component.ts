@@ -13,6 +13,7 @@ import {
 import { ArchivoService } from '../../services/archivo.service';
 import { PdfConstanciaService } from '../../services/pdf-constancia.service';
 import { ConsultaArchivoService, ExpedienteArchivoCentral } from '../../services/consulta-archivo.service';
+import { QuipuscanService, QuipuscanExpediente } from '../../services/quipuscan.service';
 import { PdfViewerModalComponent } from '../../components/pdf-viewer-modal/pdf-viewer-modal.component';
 import { GoogleSheetModalComponent } from '../../components/google-sheet-modal/google-sheet-modal.component';
 
@@ -123,6 +124,10 @@ export class AtencionSolicitudesComponent implements OnInit {
   // Filtros automáticos extraídos de "Datos del expediente"
   filtrosCoincidencias: { clave: string; valor: string; activo: boolean }[] = [];
 
+  // Mapa de resultados Quipuscan (indexado por nro_expediente / nro_formateado)
+  quipuscanMap = new Map<string, QuipuscanExpediente>();
+  solicitudTieneQuipuscan = false;
+
   // 6. Modal Constancia PDF y Visor de Documentos Adjuntos (Pág. 20 y 21)
   mostrarModalPdf = false;
   documentoVisorActivo: DocumentoAdjunto | null = null;
@@ -142,6 +147,7 @@ export class AtencionSolicitudesComponent implements OnInit {
     public archivoService: ArchivoService,
     private pdfService: PdfConstanciaService,
     private consultaArchivoService: ConsultaArchivoService,
+    private quipuscanService: QuipuscanService,
     private router: Router
   ) {}
 
@@ -352,6 +358,17 @@ export class AtencionSolicitudesComponent implements OnInit {
   abrirVerDetalles(sol: SolicitudArchivo): void {
     this.solicitudActiva = sol;
     this.mostrarModalVerDetalles = true;
+    const nroSol = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
+    if (nroSol) {
+      this.quipuscanService.obtenerDetalleExpediente(nroSol).then((res) => {
+        this.solicitudTieneQuipuscan = Boolean(res && res.length > 0);
+        if (this.solicitudTieneQuipuscan) {
+          this.quipuscanMap.set(nroSol, res[0]);
+        }
+      });
+    } else {
+      this.solicitudTieneQuipuscan = false;
+    }
   }
 
   descargarOVerAdjunto(doc: DocumentoAdjunto): void {
@@ -561,6 +578,18 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.expedienteSeleccionadoDetalle = null;
     this.mensajeErrorBusquedaArchivo = '';
 
+    const nroSol = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
+    if (nroSol) {
+      this.quipuscanService.obtenerDetalleExpediente(nroSol).then((res) => {
+        this.solicitudTieneQuipuscan = Boolean(res && res.length > 0);
+        if (this.solicitudTieneQuipuscan) {
+          this.quipuscanMap.set(nroSol, res[0]);
+        }
+      });
+    } else {
+      this.solicitudTieneQuipuscan = false;
+    }
+
     if (tieneRegistroGuardado) {
       // Si ya existe registro guardado, el filtro de búsqueda y las coincidencias quedan limpios
       this.consultaNumero = '';
@@ -614,6 +643,7 @@ export class AtencionSolicitudesComponent implements OnInit {
       } else {
         this.generarFiltrosDesdeSolicitud();
         this.aplicarFiltrosCoincidencias();
+        this.consultarQuipuscanParaResultados(this.todosResultadosArchivoCentral);
       }
     } catch (err) {
       this.mensajeErrorBusquedaArchivo = 'Error al consultar el Archivo Central: ' + ((err as Error)?.message || 'Sin conexión');
@@ -752,6 +782,55 @@ export class AtencionSolicitudesComponent implements OnInit {
     await this.archivoService.actualizarUbicacion(this.solicitudActiva.idSolicitud, this.ubicacionForm);
     this.mostrarModalUbicacion = false;
     this.mostrarAlertaVerde('UBICACIÓN REGISTRADA');
+  }
+
+  // =========================================================================
+  // INTEGRACIÓN QUIPUSCAN (Digitalización de Expedientes)
+  // =========================================================================
+  async consultarQuipuscanParaResultados(expedientes: ExpedienteArchivoCentral[]): Promise<void> {
+    const promesas = (expedientes || []).map(async (exp) => {
+      const nro = (exp.nro_formateado || exp.codg_expdte || '').trim();
+      if (nro) {
+        const res = await this.quipuscanService.obtenerDetalleExpediente(nro);
+        if (res && res.length > 0) {
+          this.quipuscanMap.set(nro, res[0]);
+        }
+      }
+    });
+    await Promise.all(promesas);
+  }
+
+  tieneQuipuscan(item: ExpedienteArchivoCentral | null | undefined): boolean {
+    if (!item) return false;
+    const nroFormateado = (item.nro_formateado || '').trim();
+    const nroExpdte = (item.codg_expdte || '').trim();
+    return Boolean(
+      (nroFormateado && this.quipuscanMap.has(nroFormateado)) ||
+      (nroExpdte && this.quipuscanMap.has(nroExpdte))
+    );
+  }
+
+  obtenerQuipuscan(item: ExpedienteArchivoCentral | null | undefined): QuipuscanExpediente | undefined {
+    if (!item) return undefined;
+    const nroFormateado = (item.nro_formateado || '').trim();
+    const nroExpdte = (item.codg_expdte || '').trim();
+    if (nroFormateado && this.quipuscanMap.has(nroFormateado)) {
+      return this.quipuscanMap.get(nroFormateado);
+    }
+    if (nroExpdte && this.quipuscanMap.has(nroExpdte)) {
+      return this.quipuscanMap.get(nroExpdte);
+    }
+    return undefined;
+  }
+
+  esParteDemandado(tipoParte: string): boolean {
+    const t = (tipoParte || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return t.includes('DEMANDAD') || t.includes('INCULPAD') || t.includes('IMPUTAD');
+  }
+
+  tieneParteDemandado(partes: { tipo_parte: string }[] | undefined): boolean {
+    if (!partes || partes.length === 0) return false;
+    return partes.some((p) => this.esParteDemandado(p.tipo_parte));
   }
 
   // =========================================================================

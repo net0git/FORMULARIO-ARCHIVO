@@ -666,6 +666,11 @@
           <div>
             <label>Demandado/Inculpado:</label>
             <input type="text" [value]="solicitudActiva.demandado" readonly class="readonly-input" />
+            <div class="etiqueta-quipuscan-box" *ngIf="solicitudTieneQuipuscan" style="margin-top: 5px;">
+              <span class="tag-quipuscan" title="Digitalizado en Quipuscan">
+                <i class="fa-solid fa-cube"></i> quipuscan
+              </span>
+            </div>
           </div>
           <div>
             <label>Materia/Delito:</label>
@@ -1059,8 +1064,26 @@
                   <div class="parte-item" *ngFor="let p of item.partes.slice(0, 2)">
                     <small class="parte-rol">{{ p.tipo_parte }}:</small>
                     <span class="parte-nombre">{{ p.nombre_parte }}</span>
+                    <!-- Etiqueta quipuscan debajo de demandado -->
+                    <div class="etiqueta-quipuscan-box" *ngIf="esParteDemandado(p.tipo_parte) && tieneQuipuscan(item)">
+                      <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                        <i class="fa-solid fa-cube"></i> quipuscan
+                      </span>
+                    </div>
+                  </div>
+                  <!-- Si el demandado no estaba en las 2 primeras partes pero el expediente tiene quipuscan -->
+                  <div class="etiqueta-quipuscan-box" *ngIf="!tieneParteDemandado(item.partes.slice(0, 2)) && tieneQuipuscan(item)">
+                    <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                      <i class="fa-solid fa-cube"></i> quipuscan
+                    </span>
                   </div>
                   <small *ngIf="item.partes.length > 2" class="partes-mas">+{{ item.partes.length - 2 }} partes más...</small>
+                </div>
+                <!-- Si no tiene partes pero tiene quipuscan -->
+                <div class="etiqueta-quipuscan-box" *ngIf="(!item.partes || item.partes.length === 0) && tieneQuipuscan(item)" style="margin: 4px 0 0 10px;">
+                  <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                    <i class="fa-solid fa-cube"></i> quipuscan
+                  </span>
                 </div>
               </div>
 
@@ -1107,7 +1130,14 @@
           <strong>Partes Procesales:</strong>
           <ul>
             <li *ngFor="let p of expedienteSeleccionadoDetalle.partes">
-              <span class="badge-rol">{{ p.tipo_parte }}</span> {{ p.nombre_parte }}
+              <div>
+                <span class="badge-rol">{{ p.tipo_parte }}</span> {{ p.nombre_parte }}
+              </div>
+              <div class="etiqueta-quipuscan-box" *ngIf="esParteDemandado(p.tipo_parte) && tieneQuipuscan(expedienteSeleccionadoDetalle)">
+                <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(expedienteSeleccionadoDetalle)?.serie_doc || 'Expediente digitalizado')">
+                  <i class="fa-solid fa-cube"></i> quipuscan
+                </span>
+              </div>
             </li>
           </ul>
         </div>
