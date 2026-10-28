@@ -730,6 +730,42 @@
   margin-top: 14px;
 }
 
+.modal-action-buttons-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn-modal-quipuscan {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.4px;
+  text-transform: lowercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-modal-quipuscan:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(2, 132, 199, 0.45);
+}
+
+.btn-modal-quipuscan i {
+  font-size: 13px;
+  color: #bae6fd;
+}
+
 .btn-modal-save {
   background: #5a6268;
   color: #ffffff;

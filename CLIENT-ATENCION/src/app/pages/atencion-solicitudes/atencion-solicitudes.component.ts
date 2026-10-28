@@ -933,6 +933,30 @@ export class AtencionSolicitudesComponent implements OnInit {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  tieneQuipuscanUbicacionActual(): boolean {
+    if (this.expedienteSeleccionadoDetalle && this.tieneQuipuscan(this.expedienteSeleccionadoDetalle)) {
+      return true;
+    }
+    if (this.solicitudTieneQuipuscan) {
+      return true;
+    }
+    if (this.solicitudActiva) {
+      const nro = (this.solicitudActiva.codigoCompletoExpediente || this.solicitudActiva.nroExpediente || '').trim();
+      if (nro && this.quipuscanMap.has(nro)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  abrirModalQuipuscanUbicacionActual(): void {
+    if (this.expedienteSeleccionadoDetalle && this.tieneQuipuscan(this.expedienteSeleccionadoDetalle)) {
+      this.abrirModalQuipuscan(this.expedienteSeleccionadoDetalle);
+    } else {
+      this.abrirModalQuipuscanDesdeSolicitud();
+    }
+  }
+
   // =========================================================================
   // ACCIÓN 6: VISUALIZACIÓN DE CONSTANCIA DE SOLICITUD PDF (Págs. 20 y 21)
   // =========================================================================

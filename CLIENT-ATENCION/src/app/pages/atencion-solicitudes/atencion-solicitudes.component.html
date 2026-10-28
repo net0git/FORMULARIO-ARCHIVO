@@ -1200,9 +1200,22 @@
 
       <div class="modal-action-section">
         <label>Accion</label>
-        <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
-          <i class="fa-regular fa-floppy-disk"></i> Guardar
-        </button>
+        <div class="modal-action-buttons-row">
+          <!-- Botón Quipuscan al otro extremo de Guardar -->
+          <button
+            type="button"
+            class="btn-modal-quipuscan"
+            *ngIf="tieneQuipuscanUbicacionActual()"
+            (click)="abrirModalQuipuscanUbicacionActual()"
+            title="Ver digitalización y portada en Quipuscan"
+          >
+            <i class="fa-solid fa-cube"></i> quipuscan
+          </button>
+
+          <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
+            <i class="fa-regular fa-floppy-disk"></i> Guardar
+          </button>
+        </div>
       </div>
     </div>
   </div>
