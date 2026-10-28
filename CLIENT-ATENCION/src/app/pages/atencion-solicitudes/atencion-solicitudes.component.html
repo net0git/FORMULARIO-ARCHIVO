@@ -1168,7 +1168,13 @@
         </div>
       </div>
 
-      <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 18px 0;" />
+      <hr id="seccion-formulario-ubicacion" style="border: 0; border-top: 1px solid #e0e0e0; margin: 18px 0;" />
+
+      <!-- Aviso informativo al seleccionar un expediente para verificar antes de guardar -->
+      <div class="aviso-seleccion-ubicacion" *ngIf="expedienteSeleccionadoDetalle">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Datos cargados en el formulario. Verifique la información y presione <strong>Guardar</strong> cuando lo desee.</span>
+      </div>
 
       <!-- Formulario estándar de guardado de ubicación -->
       <div class="modal-field">

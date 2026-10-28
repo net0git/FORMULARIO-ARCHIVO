@@ -1586,3 +1586,22 @@
   border: none;
   background: #ffffff;
 }
+
+.aviso-seleccion-ubicacion {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.aviso-seleccion-ubicacion i {
+  color: #10b981;
+  font-size: 0.95rem;
+}

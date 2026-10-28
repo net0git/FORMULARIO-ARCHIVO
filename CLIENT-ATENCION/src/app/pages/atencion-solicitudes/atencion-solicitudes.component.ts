@@ -762,7 +762,7 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.aplicarFiltrosCoincidencias();
   }
 
-  async seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral, autoGuardar: boolean = true): Promise<void> {
+  seleccionarExpedienteArchivo(item: ExpedienteArchivoCentral): void {
     this.ubicacionForm.ubicacion = item.desc_instan ? `${item.desc_instan} (Local ${item.codg_local || ''})`.trim() : (item.codg_local ? `Local ${item.codg_local}` : '');
     this.ubicacionForm.anaquel = item.codg_anaqul || '';
     this.ubicacionForm.fila = item.codg_fila || '';
@@ -770,9 +770,13 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.ubicacionForm.paquete = item.codg_paquet || '';
     this.expedienteSeleccionadoDetalle = item;
 
-    if (autoGuardar) {
-      await this.guardarUbicacionExpediente();
-    }
+    // Desplazamiento suave hacia el formulario para que el usuario verifique y guarde cuando lo desee
+    setTimeout(() => {
+      const formEl = document.getElementById('seccion-formulario-ubicacion');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
   }
 
   verDetalleExpediente(item: ExpedienteArchivoCentral): void {
