@@ -117,9 +117,9 @@ export class CensurarPdfComponent implements OnDestroy {
       this.pdfOriginalUrl = this.sanitizer.bypassSecurityTrustResourceUrl(origUrl);
       this.vistaVisor = 'original';
 
-      // Analizar documento para extraer sujetos
+      // Analizar documento para extraer sujetos pasando una copia del buffer
       const resultado: ResultadoAnalisisPdf = await this.pdfCensuraService.analizarPdf(
-        buffer,
+        buffer.slice(0),
         file.name,
         (msg, pct) => {
           this.progresoMensaje = msg;
@@ -174,7 +174,7 @@ export class CensurarPdfComponent implements OnDestroy {
   // APLICAR CENSURA AL DOCUMENTO
   // =========================================================================
   async aplicarCensura(): Promise<void> {
-    if (!this.rawPdfOriginalBytes) return;
+    if (!this.archivoCargado && !this.rawPdfOriginalBytes) return;
 
     const seleccionados = this.sujetos.filter(s => s.seleccionado);
     if (seleccionados.length === 0) {
@@ -184,8 +184,14 @@ export class CensurarPdfComponent implements OnDestroy {
 
     try {
       this.censurando = true;
+
+      // Obtener siempre un buffer fresco o clonado para evitar "detached ArrayBuffer"
+      const bytesOriginales = this.archivoCargado
+        ? await this.archivoCargado.arrayBuffer()
+        : this.rawPdfOriginalBytes!.slice(0);
+
       const res = await this.pdfCensuraService.censurarPdf(
-        this.rawPdfOriginalBytes,
+        bytesOriginales,
         this.sujetos,
         {
           censurarEtiquetas: this.censurarEtiquetas,

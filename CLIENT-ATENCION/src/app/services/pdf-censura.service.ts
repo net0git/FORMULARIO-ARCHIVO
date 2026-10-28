@@ -48,7 +48,9 @@ export class PdfCensuraService {
     onProgreso?: (mensaje: string, porcentaje: number) => void
   ): Promise<ResultadoAnalisisPdf> {
     onProgreso?.('Cargando documento PDF...', 15);
-    const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+    // Clonar el buffer para evitar que PDF.js lo desmonte (detached ArrayBuffer)
+    const dataParaPdfJs = new Uint8Array(pdfBytes.slice(0));
+    const doc = await pdfjsLib.getDocument({ data: dataParaPdfJs }).promise;
     const numPaginas = doc.numPages;
 
     let textoTotal = '';
@@ -248,12 +250,17 @@ export class PdfCensuraService {
       }));
 
     if (terminosValidos.length === 0) {
-      return { pdfBytes: new Uint8Array(pdfOriginalBytes), totalCoincidencias: 0 };
+      return { pdfBytes: new Uint8Array(pdfOriginalBytes.slice(0)), totalCoincidencias: 0 };
     }
 
-    // 1. Cargar el documento tanto en PDF.js (para extraer coordenadas) como en pdf-lib (para modificarlo)
-    const docPdfJs = await pdfjsLib.getDocument({ data: pdfOriginalBytes }).promise;
-    const pdfLibDoc = await PDFDocument.load(pdfOriginalBytes);
+    // 1. Clonar copias independientes para PDF.js y pdf-lib.
+    // Esto previene el error "Cannot perform Construct on a detached ArrayBuffer",
+    // ya que PDF.js transfiere su buffer al Web Worker desacoplándolo del hilo principal.
+    const bytesParaPdfJs = new Uint8Array(pdfOriginalBytes.slice(0));
+    const bytesParaPdfLib = new Uint8Array(pdfOriginalBytes.slice(0));
+
+    const docPdfJs = await pdfjsLib.getDocument({ data: bytesParaPdfJs }).promise;
+    const pdfLibDoc = await PDFDocument.load(bytesParaPdfLib);
     const numPaginas = docPdfJs.numPages;
 
     let totalCoincidencias = 0;
