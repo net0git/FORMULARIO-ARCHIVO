@@ -1317,7 +1317,9 @@
    VENTANA EMERGENTE (MODAL) QUIPUSCAN - 2 COLUMNAS
    ========================================================================= */
 .overlay-quipuscan {
-  z-index: 1200 !important;
+  z-index: 99999 !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  backdrop-filter: blur(2px);
 }
 
 .modal-quipuscan-dialog {
