@@ -1142,8 +1142,8 @@
         </div>
       </div>
 
-      <!-- Detalle emergente/expandido si selecciona 'Detalle' -->
-      <div class="expediente-detalle-completo" *ngIf="expedienteSeleccionadoDetalle">
+      <!-- Detalle emergente/expandido si selecciona 'Detalle' (solo si NO está asociado a Quipuscan) -->
+      <div class="expediente-detalle-completo" *ngIf="expedienteSeleccionadoDetalle && !tieneQuipuscanUbicacionActual()">
         <div class="detalle-header">
           <h4><i class="fa-solid fa-file-invoice"></i> Detalle del Expediente Seleccionado</h4>
           <button type="button" class="btn-cerrar-mini" (click)="expedienteSeleccionadoDetalle = null">&times;</button>
@@ -1181,12 +1181,6 @@
       </div>
 
       <hr id="seccion-formulario-ubicacion" style="border: 0; border-top: 1px solid #e0e0e0; margin: 18px 0;" />
-
-      <!-- Aviso informativo al seleccionar un expediente para verificar antes de guardar -->
-      <div class="aviso-seleccion-ubicacion" *ngIf="expedienteSeleccionadoDetalle">
-        <i class="fa-solid fa-circle-check"></i>
-        <span>Datos cargados en el formulario. Verifique la información y presione <strong>Guardar</strong> cuando lo desee.</span>
-      </div>
 
       <!-- Formulario estándar de guardado de ubicación -->
       <div class="modal-field">
