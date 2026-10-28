@@ -1,0 +1,326 @@
+<div class="censura-layout">
+  <!-- ======================================================================= -->
+  <!-- COLUMNA IZQUIERDA: PANEL DE CONTROL Y ANÁLISIS                          -->
+  <!-- ======================================================================= -->
+  <div class="censura-col-control">
+    <div class="control-header">
+      <div class="header-icon">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <div class="header-text">
+        <h2>Herramienta de Censura de PDF</h2>
+        <p>Anonimización y protección de datos judiciales (Demandante, Demandado, Agraviado)</p>
+      </div>
+    </div>
+
+    <!-- 1. ZONA DE CARGA DE ARCHIVO (DRAG & DROP) -->
+    <div
+      class="upload-dropzone"
+      [class.dragging]="isDragging"
+      [class.has-file]="archivoCargado"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onFileDrop($event)"
+    >
+      <input
+        type="file"
+        #fileInput
+        (change)="onFileSelected($event)"
+        accept="application/pdf"
+        class="file-input-hidden"
+      />
+
+      <div *ngIf="!archivoCargado" class="dropzone-content" (click)="fileInput.click()">
+        <div class="upload-icon-circle">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <p class="dropzone-title">Arrastra tu archivo PDF aquí</p>
+        <p class="dropzone-subtitle">o haz clic para examinar desde tu equipo</p>
+        <span class="file-format-badge"><i class="fa-regular fa-file-pdf"></i> Solo archivos PDF (.pdf)</span>
+      </div>
+
+      <!-- Resumen del archivo cargado -->
+      <div *ngIf="archivoCargado" class="file-summary-card">
+        <div class="file-summary-icon">
+          <i class="fa-solid fa-file-pdf"></i>
+        </div>
+        <div class="file-summary-info">
+          <h4 class="file-name" [title]="nombreArchivo">{{ nombreArchivo }}</h4>
+          <div class="file-meta">
+            <span><i class="fa-solid fa-weight-hanging"></i> {{ tamanoArchivo }}</span>
+            <span *ngIf="numPaginas > 0"><i class="fa-regular fa-file-lines"></i> {{ numPaginas }} pág{{ numPaginas > 1 ? 's' : '' }}</span>
+            <span *ngIf="fuePorOcr" class="ocr-tag"><i class="fa-solid fa-eye"></i> OCR Activo</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn-change-file"
+          (click)="fileInput.click()"
+          title="Seleccionar otro archivo"
+        >
+          <i class="fa-solid fa-rotate"></i> Cambiar
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. BARRA DE PROGRESO DE ANÁLISIS -->
+    <div *ngIf="analizando" class="progress-box fade-in">
+      <div class="progress-header">
+        <span class="progress-label">
+          <i class="fa-solid fa-spinner fa-spin"></i> {{ progresoMensaje }}
+        </span>
+        <span class="progress-pct">{{ progresoPorcentaje }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" [style.width.%]="progresoPorcentaje"></div>
+      </div>
+    </div>
+
+    <!-- 3. LISTA DE DATOS DETECTADOS PARA CENSURAR -->
+    <div *ngIf="analisisCompletado && !analizando" class="detection-section fade-in">
+      <div class="section-title-row">
+        <div>
+          <h3>Datos Identificados para Censurar</h3>
+          <p class="section-desc">Determina si estás de acuerdo marcando o desmarcando cada dato:</p>
+        </div>
+        <div class="quick-toggle-btns" *ngIf="sujetos.length > 0">
+          <button type="button" class="btn-text-action" (click)="seleccionarTodos(true)">Todos</button>
+          <span>|</span>
+          <button type="button" class="btn-text-action" (click)="seleccionarTodos(false)">Ninguno</button>
+        </div>
+      </div>
+
+      <!-- Alerta si no se encontraron sujetos automáticos -->
+      <div *ngIf="sujetos.length === 0" class="empty-sujetos-alert">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <strong>No se detectaron sujetos automáticamente en la portada.</strong>
+          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario a continuación.</p>
+        </div>
+      </div>
+
+      <!-- Lista interactiva de sujetos -->
+      <div class="sujetos-list" *ngIf="sujetos.length > 0">
+        <div
+          *ngFor="let s of sujetos; let i = index"
+          class="sujeto-card"
+          [class.checked]="s.seleccionado"
+          [class.cat-demandante]="s.categoria === 'DEMANDANTE'"
+          [class.cat-demandado]="s.categoria === 'DEMANDADO'"
+          [class.cat-agraviado]="s.categoria === 'AGRAVIADO'"
+          [class.cat-domicilio]="s.categoria === 'DOMICILIO'"
+          [class.cat-otro]="s.categoria === 'OTRO'"
+        >
+          <div class="sujeto-card-checkbox">
+            <label class="custom-checkbox">
+              <input type="checkbox" [(ngModel)]="s.seleccionado" />
+              <span class="checkmark"></span>
+            </label>
+          </div>
+
+          <div class="sujeto-card-body">
+            <div class="sujeto-meta-row">
+              <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
+                {{ s.categoria }}
+              </span>
+              <span class="sujeto-status">
+                {{ s.seleccionado ? 'Se censurará' : 'Conservar (No censurar)' }}
+              </span>
+            </div>
+            <input
+              type="text"
+              [(ngModel)]="s.valor"
+              class="sujeto-input-text"
+              placeholder="Texto o nombre a censurar"
+              title="Puedes editar el texto si requieres afinar la coincidencia"
+            />
+          </div>
+
+          <button
+            type="button"
+            class="btn-remove-sujeto"
+            (click)="eliminarSujeto(i)"
+            title="Quitar este elemento de la lista"
+          >
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulario para agregar término manual -->
+      <div class="add-manual-box">
+        <label><i class="fa-solid fa-plus"></i> Agregar dato adicional para censurar:</label>
+        <div class="add-manual-row">
+          <select [(ngModel)]="nuevaCategoriaManual" class="manual-select">
+            <option value="DEMANDANTE">DEMANDANTE</option>
+            <option value="DEMANDADO">DEMANDADO</option>
+            <option value="AGRAVIADO">AGRAVIADO</option>
+            <option value="DOMICILIO">DOMICILIO</option>
+            <option value="OTRO">OTRO DATO</option>
+          </select>
+          <input
+            type="text"
+            [(ngModel)]="nuevoTextoManual"
+            (keyup.enter)="agregarSujetoManual()"
+            placeholder="Ej: Nombre, DNI, dirección..."
+            class="manual-input"
+          />
+          <button
+            type="button"
+            class="btn-add-manual"
+            (click)="agregarSujetoManual()"
+            [disabled]="!nuevoTextoManual.trim()"
+          >
+            Agregar
+          </button>
+        </div>
+      </div>
+
+      <!-- Opciones avanzadas de censura -->
+      <div class="options-box">
+        <label class="option-check-label">
+          <input type="checkbox" [(ngModel)]="censurarEtiquetas" />
+          <span>Censurar también las etiquetas de texto (ej: <code>DEMANDANTE:</code>, <code>DEMANDADO:</code>, etc.)</span>
+        </label>
+      </div>
+
+      <!-- 4. BOTÓN DE ACCIÓN: APLICAR CENSURA -->
+      <div class="action-btn-area">
+        <button
+          type="button"
+          class="btn-apply-censura"
+          [disabled]="censurando || cantidadSeleccionados === 0"
+          (click)="aplicarCensura()"
+        >
+          <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
+          <i class="fa-solid fa-shield-halved" *ngIf="!censurando"></i>
+          <span>
+            {{ censurando ? 'Procesando y censurando PDF...' : ('Censurar Datos Aprobados (' + cantidadSeleccionados + ')') }}
+          </span>
+        </button>
+      </div>
+
+      <!-- 5. RESULTADO EXITOSO Y DESCARGA -->
+      <div *ngIf="censuraAplicada" class="success-banner fade-in">
+        <div class="success-icon">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="success-details">
+          <h4>¡Documento censurado con éxito!</h4>
+          <p>
+            Se aplicaron los bloques de censura sobre el documento.
+            {{ totalCensurados > 0 ? (totalCensurados + ' ocurrencias tapadas permanentemente.') : '' }}
+          </p>
+          <div class="success-actions">
+            <button
+              type="button"
+              class="btn-download-censurado"
+              (click)="descargarPdfCensurado()"
+            >
+              <i class="fa-solid fa-download"></i> Descargar Documento Censurado
+            </button>
+            <button
+              type="button"
+              class="btn-reset-censura"
+              (click)="restablecer()"
+            >
+              <i class="fa-solid fa-arrow-rotate-left"></i> Nuevo Archivo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- COLUMNA DERECHA: VISOR INTERACTIVO DEL DOCUMENTO                        -->
+  <!-- ======================================================================= -->
+  <div class="censura-col-visor">
+    <div class="visor-topbar">
+      <div class="visor-tabs">
+        <button
+          type="button"
+          class="visor-tab-btn"
+          [class.active]="vistaVisor === 'original'"
+          [disabled]="!pdfOriginalUrl"
+          (click)="vistaVisor = 'original'"
+        >
+          <i class="fa-regular fa-file-pdf"></i> Documento Original
+        </button>
+        <button
+          type="button"
+          class="visor-tab-btn tab-censurado"
+          [class.active]="vistaVisor === 'censurado'"
+          [disabled]="!pdfCensuradoUrl"
+          (click)="vistaVisor = 'censurado'"
+        >
+          <i class="fa-solid fa-user-secret"></i> Documento Censurado
+          <span *ngIf="censuraAplicada" class="badge-pill-success">Listo</span>
+        </button>
+      </div>
+
+      <div class="visor-actions">
+        <button
+          type="button"
+          class="btn-visor-action"
+          (click)="abrirEnNuevaVentana()"
+          [disabled]="!archivoCargado"
+          title="Abrir en pestaña nueva"
+        >
+          <i class="fa-solid fa-up-right-from-square"></i>
+        </button>
+        <button
+          type="button"
+          class="btn-visor-action download-btn"
+          *ngIf="censuraAplicada"
+          (click)="descargarPdfCensurado()"
+          title="Descargar documento censurado"
+        >
+          <i class="fa-solid fa-download"></i> Descargar
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido del Visor -->
+    <div class="visor-canvas-container">
+      <!-- Placeholder cuando aún no se ha cargado archivo -->
+      <div *ngIf="!archivoCargado" class="visor-empty-state">
+        <div class="empty-icon-box">
+          <i class="fa-solid fa-file-pdf"></i>
+        </div>
+        <h3>Visor de Documento</h3>
+        <p>Selecciona o arrastra un archivo PDF en el panel izquierdo para previsualizarlo aquí en tiempo real.</p>
+        <div class="feature-bullets">
+          <div class="bullet-item">
+            <i class="fa-solid fa-check"></i>
+            <span>Detección automática de Sujetos Procesales</span>
+          </div>
+          <div class="bullet-item">
+            <i class="fa-solid fa-check"></i>
+            <span>Aprobación interactiva antes de censurar</span>
+          </div>
+          <div class="bullet-item">
+            <i class="fa-solid fa-check"></i>
+            <span>Descarga inmediata con anonimización permanente</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Iframe del PDF Original -->
+      <iframe
+        *ngIf="archivoCargado && vistaVisor === 'original' && pdfOriginalUrl"
+        [src]="pdfOriginalUrl"
+        class="pdf-iframe-view"
+        title="Visor Documento Original"
+      ></iframe>
+
+      <!-- Iframe del PDF Censurado -->
+      <iframe
+        *ngIf="archivoCargado && vistaVisor === 'censurado' && pdfCensuradoUrl"
+        [src]="pdfCensuradoUrl"
+        class="pdf-iframe-view"
+        title="Visor Documento Censurado"
+      ></iframe>
+    </div>
+  </div>
+</div>

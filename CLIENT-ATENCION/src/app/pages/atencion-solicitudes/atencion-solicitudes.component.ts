@@ -17,6 +17,7 @@ import { ConsultaArchivoService, ExpedienteArchivoCentral } from '../../services
 import { QuipuscanService, QuipuscanExpediente } from '../../services/quipuscan.service';
 import { PdfViewerModalComponent } from '../../components/pdf-viewer-modal/pdf-viewer-modal.component';
 import { GoogleSheetModalComponent } from '../../components/google-sheet-modal/google-sheet-modal.component';
+import { CensurarPdfComponent } from '../../components/censurar-pdf/censurar-pdf.component';
 
 @Component({
   selector: 'app-atencion-solicitudes',
@@ -26,7 +27,8 @@ import { GoogleSheetModalComponent } from '../../components/google-sheet-modal/g
     FormsModule,
     RouterModule,
     PdfViewerModalComponent,
-    GoogleSheetModalComponent
+    GoogleSheetModalComponent,
+    CensurarPdfComponent
   ],
   templateUrl: './atencion-solicitudes.component.html',
   styleUrls: ['./atencion-solicitudes.component.css']

@@ -515,20 +515,7 @@
       <!-- MÓDULO HERRAMIENTAS: CENSURAR PDF                                 -->
       <!-- ================================================================= -->
       <ng-container *ngIf="vistaActiva === 'censurar-pdf'">
-        <section class="admin-card fade-in">
-          <div class="admin-card-header">
-            Herramientas - Censurar PDF
-          </div>
-          <div class="admin-card-body">
-            <div style="padding: 40px 20px; text-align: center; color: #475569;">
-              <i class="fa-solid fa-file-shield" style="font-size: 54px; color: #0284c7; margin-bottom: 16px; display: inline-block;"></i>
-              <h3 style="margin-bottom: 8px; font-weight: 600; color: #1e293b;">Módulo Censurar PDF</h3>
-              <p style="font-size: 14px; max-width: 520px; margin: 0 auto; color: #64748b;">
-                Herramienta para censurar, proteger y anonimizar datos confidenciales en documentos PDF.
-              </p>
-            </div>
-          </div>
-        </section>
+        <app-censurar-pdf></app-censurar-pdf>
       </ng-container>
     </main>
   </div>
