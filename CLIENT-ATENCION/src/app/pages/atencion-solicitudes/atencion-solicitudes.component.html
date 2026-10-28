@@ -667,9 +667,14 @@
             <label>Demandado/Inculpado:</label>
             <input type="text" [value]="solicitudActiva.demandado" readonly class="readonly-input" />
             <div class="etiqueta-quipuscan-box" *ngIf="solicitudTieneQuipuscan" style="margin-top: 5px;">
-              <span class="tag-quipuscan" title="Digitalizado en Quipuscan">
+              <button
+                type="button"
+                class="tag-quipuscan tag-quipuscan-btn"
+                (click)="abrirModalQuipuscanDesdeSolicitud($event)"
+                title="Quipuscan: Expediente digitalizado - Clic para ver portada y detalles"
+              >
                 <i class="fa-solid fa-cube"></i> quipuscan
-              </span>
+              </button>
             </div>
           </div>
           <div>
@@ -1066,24 +1071,39 @@
                     <span class="parte-nombre">{{ p.nombre_parte }}</span>
                     <!-- Etiqueta quipuscan debajo de demandado -->
                     <div class="etiqueta-quipuscan-box" *ngIf="esParteDemandado(p.tipo_parte) && tieneQuipuscan(item)">
-                      <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                      <button
+                        type="button"
+                        class="tag-quipuscan tag-quipuscan-btn"
+                        (click)="abrirModalQuipuscan(item, $event)"
+                        [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado') + ' - Clic para ver portada y detalles'"
+                      >
                         <i class="fa-solid fa-cube"></i> quipuscan
-                      </span>
+                      </button>
                     </div>
                   </div>
                   <!-- Si el demandado no estaba en las 2 primeras partes pero el expediente tiene quipuscan -->
                   <div class="etiqueta-quipuscan-box" *ngIf="!tieneParteDemandado(item.partes.slice(0, 2)) && tieneQuipuscan(item)">
-                    <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                    <button
+                      type="button"
+                      class="tag-quipuscan tag-quipuscan-btn"
+                      (click)="abrirModalQuipuscan(item, $event)"
+                      [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado') + ' - Clic para ver portada y detalles'"
+                    >
                       <i class="fa-solid fa-cube"></i> quipuscan
-                    </span>
+                    </button>
                   </div>
                   <small *ngIf="item.partes.length > 2" class="partes-mas">+{{ item.partes.length - 2 }} partes más...</small>
                 </div>
                 <!-- Si no tiene partes pero tiene quipuscan -->
                 <div class="etiqueta-quipuscan-box" *ngIf="(!item.partes || item.partes.length === 0) && tieneQuipuscan(item)" style="margin: 4px 0 0 10px;">
-                  <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado')">
+                  <button
+                    type="button"
+                    class="tag-quipuscan tag-quipuscan-btn"
+                    (click)="abrirModalQuipuscan(item, $event)"
+                    [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado') + ' - Clic para ver portada y detalles'"
+                  >
                     <i class="fa-solid fa-cube"></i> quipuscan
-                  </span>
+                  </button>
                 </div>
               </div>
 
@@ -1134,9 +1154,14 @@
                 <span class="badge-rol">{{ p.tipo_parte }}</span> {{ p.nombre_parte }}
               </div>
               <div class="etiqueta-quipuscan-box" *ngIf="esParteDemandado(p.tipo_parte) && tieneQuipuscan(expedienteSeleccionadoDetalle)">
-                <span class="tag-quipuscan" [title]="'Quipuscan: ' + (obtenerQuipuscan(expedienteSeleccionadoDetalle)?.serie_doc || 'Expediente digitalizado')">
+                <button
+                  type="button"
+                  class="tag-quipuscan tag-quipuscan-btn"
+                  (click)="abrirModalQuipuscan(expedienteSeleccionadoDetalle, $event)"
+                  [title]="'Quipuscan: ' + (obtenerQuipuscan(expedienteSeleccionadoDetalle)?.serie_doc || 'Expediente digitalizado') + ' - Clic para ver portada y detalles'"
+                >
                   <i class="fa-solid fa-cube"></i> quipuscan
-                </span>
+                </button>
               </div>
             </li>
           </ul>
@@ -1172,6 +1197,115 @@
         <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
           <i class="fa-regular fa-floppy-disk"></i> Guardar
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- MODAL QUIPUSCAN: DETALLES Y VISOR DE PORTADA (2 COLUMNAS)               -->
+<!-- ======================================================================= -->
+<div class="admin-modal-overlay overlay-quipuscan" *ngIf="mostrarModalQuipuscan && expedienteQuipuscanActivo" (click)="cerrarModalQuipuscan()">
+  <div class="admin-modal-dialog modal-quipuscan-dialog fade-in" (click)="$event.stopPropagation()">
+    <div class="admin-modal-header quipuscan-modal-header">
+      <div class="quipuscan-header-title">
+        <i class="fa-solid fa-cube"></i>
+        <div>
+          <h3>Digitalización Quipuscan</h3>
+          <small>Expediente N° {{ expedienteQuipuscanActivo.nro_expediente }}</small>
+        </div>
+      </div>
+      <button type="button" class="btn-cerrar-modal" (click)="cerrarModalQuipuscan()">&times;</button>
+    </div>
+
+    <div class="admin-modal-body quipuscan-modal-body">
+      <div class="quipuscan-grid">
+        <!-- COLUMNA IZQUIERDA: DATOS DEL EXPEDIENTE -->
+        <div class="quipuscan-col-datos">
+          <div class="quipuscan-seccion-card">
+            <h4><i class="fa-solid fa-circle-info"></i> Información en Quipuscan</h4>
+            <div class="quipuscan-item-dato">
+              <span class="lbl-quipuscan">N° Expediente:</span>
+              <span class="val-quipuscan exp-destacado">{{ expedienteQuipuscanActivo.nro_expediente }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteQuipuscanActivo.serie_doc">
+              <span class="lbl-quipuscan">Serie Documental:</span>
+              <span class="val-quipuscan">{{ expedienteQuipuscanActivo.serie_doc }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteQuipuscanActivo.codigo">
+              <span class="lbl-quipuscan">Código:</span>
+              <span class="val-quipuscan font-mono">{{ expedienteQuipuscanActivo.codigo }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteQuipuscanActivo.dir_ftp">
+              <span class="lbl-quipuscan">Directorio FTP:</span>
+              <span class="val-quipuscan font-mono">{{ expedienteQuipuscanActivo.dir_ftp }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteQuipuscanActivo.peso_doc">
+              <span class="lbl-quipuscan">Tamaño del Expediente:</span>
+              <span class="val-quipuscan badge-peso">{{ formatearPesoBytes(expedienteQuipuscanActivo.peso_doc) }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteQuipuscanActivo.nombre_disco">
+              <span class="lbl-quipuscan">Disco Asignado:</span>
+              <span class="val-quipuscan">{{ expedienteQuipuscanActivo.nombre_disco }}</span>
+            </div>
+          </div>
+
+          <!-- Si viene del archivo central con datos de ubicación -->
+          <div class="quipuscan-seccion-card" *ngIf="expedienteArchivoActivo">
+            <h4><i class="fa-solid fa-location-dot"></i> Ubicación en Archivo Central</h4>
+            <div class="quipuscan-item-dato" *ngIf="expedienteArchivoActivo.desc_instan">
+              <span class="lbl-quipuscan">Juzgado / Instancia:</span>
+              <span class="val-quipuscan">{{ expedienteArchivoActivo.desc_instan }}</span>
+            </div>
+            <div class="quipuscan-item-dato" *ngIf="expedienteArchivoActivo.codg_local">
+              <span class="lbl-quipuscan">Local:</span>
+              <span class="val-quipuscan">Local {{ expedienteArchivoActivo.codg_local }}</span>
+            </div>
+            <div class="quipuscan-ubi-tags">
+              <span class="tag-ubi" *ngIf="expedienteArchivoActivo.codg_anaqul"><strong>Anaquel:</strong> {{ expedienteArchivoActivo.codg_anaqul }}</span>
+              <span class="tag-ubi" *ngIf="expedienteArchivoActivo.codg_fila"><strong>Fila:</strong> {{ expedienteArchivoActivo.codg_fila }}</span>
+              <span class="tag-ubi" *ngIf="expedienteArchivoActivo.codg_column"><strong>Columna:</strong> {{ expedienteArchivoActivo.codg_column }}</span>
+              <span class="tag-ubi" *ngIf="expedienteArchivoActivo.codg_paquet"><strong>Paquete:</strong> {{ expedienteArchivoActivo.codg_paquet }}</span>
+            </div>
+            <div class="quipuscan-partes-mini" *ngIf="expedienteArchivoActivo.partes && expedienteArchivoActivo.partes.length > 0">
+              <span class="lbl-quipuscan">Partes Procesales:</span>
+              <div class="parte-mini" *ngFor="let p of expedienteArchivoActivo.partes">
+                <small class="parte-rol">{{ p.tipo_parte }}:</small>
+                <span>{{ p.nombre_parte }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón de descarga de expediente completo -->
+          <div class="quipuscan-descarga-box">
+            <button
+              type="button"
+              class="btn-descargar-expediente"
+              (click)="descargarExpedienteCompleto()"
+              [disabled]="descargandoExpedienteQuipuscan"
+            >
+              <i class="fa-solid fa-spinner fa-spin" *ngIf="descargandoExpedienteQuipuscan"></i>
+              <i class="fa-solid fa-file-arrow-down" *ngIf="!descargandoExpedienteQuipuscan"></i>
+              <span>{{ descargandoExpedienteQuipuscan ? 'Descargando expediente...' : 'Descargar Expediente Completo' }}</span>
+              <small *ngIf="expedienteQuipuscanActivo.peso_doc">({{ formatearPesoBytes(expedienteQuipuscanActivo.peso_doc) }})</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: VISOR SIMPLE DE LA PORTADA PDF -->
+        <div class="quipuscan-col-visor">
+          <div class="visor-portada-header">
+            <span><i class="fa-solid fa-file-pdf"></i> Portada del Expediente (PDF)</span>
+          </div>
+          <div class="visor-portada-wrapper">
+            <iframe
+              *ngIf="urlPortadaQuipuscanSegura"
+              [src]="urlPortadaQuipuscanSegura"
+              class="visor-portada-iframe"
+              title="Portada del Expediente"
+            ></iframe>
+          </div>
+        </div>
       </div>
     </div>
   </div>

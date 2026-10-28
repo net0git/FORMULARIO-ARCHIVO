@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import {
   CORTES_SUPERIORES,
   DocumentoAdjunto,
@@ -140,6 +141,13 @@ export class AtencionSolicitudesComponent implements OnInit {
   // Modal Google Sheets
   mostrarModalGoogleSheet = false;
 
+  // Modal Quipuscan (Ventana emergente con datos y visor de portada)
+  mostrarModalQuipuscan = false;
+  expedienteQuipuscanActivo: QuipuscanExpediente | null = null;
+  expedienteArchivoActivo: ExpedienteArchivoCentral | null = null;
+  urlPortadaQuipuscanSegura: SafeResourceUrl | null = null;
+  descargandoExpedienteQuipuscan = false;
+
   // Alerta verde de confirmación del sistema
   alertaVerdeMensaje = '';
 
@@ -148,6 +156,7 @@ export class AtencionSolicitudesComponent implements OnInit {
     private pdfService: PdfConstanciaService,
     private consultaArchivoService: ConsultaArchivoService,
     private quipuscanService: QuipuscanService,
+    private sanitizer: DomSanitizer,
     private router: Router
   ) {}
 
@@ -831,6 +840,93 @@ export class AtencionSolicitudesComponent implements OnInit {
   tieneParteDemandado(partes: { tipo_parte: string }[] | undefined): boolean {
     if (!partes || partes.length === 0) return false;
     return partes.some((p) => this.esParteDemandado(p.tipo_parte));
+  }
+
+  abrirModalQuipuscan(item: ExpedienteArchivoCentral, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const info = this.obtenerQuipuscan(item);
+    const nro = (item.nro_formateado || item.codg_expdte || '').trim();
+
+    if (info) {
+      this.expedienteQuipuscanActivo = info;
+      this.expedienteArchivoActivo = item;
+      const urlPortada = this.quipuscanService.obtenerUrlPortada(info.nro_expediente, info.codigo || '');
+      this.urlPortadaQuipuscanSegura = this.sanitizer.bypassSecurityTrustResourceUrl(urlPortada);
+      this.mostrarModalQuipuscan = true;
+    } else if (nro) {
+      this.quipuscanService.obtenerDetalleExpediente(nro).then((res) => {
+        if (res && res.length > 0) {
+          this.quipuscanMap.set(nro, res[0]);
+          this.expedienteQuipuscanActivo = res[0];
+          this.expedienteArchivoActivo = item;
+          const urlPortada = this.quipuscanService.obtenerUrlPortada(res[0].nro_expediente, res[0].codigo || '');
+          this.urlPortadaQuipuscanSegura = this.sanitizer.bypassSecurityTrustResourceUrl(urlPortada);
+          this.mostrarModalQuipuscan = true;
+        }
+      });
+    }
+  }
+
+  abrirModalQuipuscanDesdeSolicitud(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!this.solicitudActiva) return;
+    const nro = (this.solicitudActiva.codigoCompletoExpediente || this.solicitudActiva.nroExpediente || '').trim();
+    if (nro && this.quipuscanMap.has(nro)) {
+      const info = this.quipuscanMap.get(nro)!;
+      this.expedienteQuipuscanActivo = info;
+      this.expedienteArchivoActivo = null;
+      const urlPortada = this.quipuscanService.obtenerUrlPortada(info.nro_expediente, info.codigo || '');
+      this.urlPortadaQuipuscanSegura = this.sanitizer.bypassSecurityTrustResourceUrl(urlPortada);
+      this.mostrarModalQuipuscan = true;
+    }
+  }
+
+  cerrarModalQuipuscan(): void {
+    this.mostrarModalQuipuscan = false;
+    this.expedienteQuipuscanActivo = null;
+    this.expedienteArchivoActivo = null;
+    this.urlPortadaQuipuscanSegura = null;
+    this.descargandoExpedienteQuipuscan = false;
+  }
+
+  async descargarExpedienteCompleto(): Promise<void> {
+    if (!this.expedienteQuipuscanActivo) return;
+    const info = this.expedienteQuipuscanActivo;
+    const nro = info.nro_expediente;
+    const dirFtp = info.dir_ftp || `${info.codigo}/EXPEDIENTES`;
+    const fileName = nro.endsWith('.pdf') ? nro : `${nro}.pdf`;
+
+    this.descargandoExpedienteQuipuscan = true;
+    try {
+      const blob = await this.quipuscanService.descargarArchivoFtp(fileName, dirFtp);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      this.mostrarAlertaVerde('EXPEDIENTE DESCARGADO');
+    } catch (err) {
+      console.error('Error al descargar expediente:', err);
+      const urlDirecta = this.quipuscanService.obtenerUrlExpedientePdf(nro, dirFtp);
+      window.open(urlDirecta, '_blank');
+    } finally {
+      this.descargandoExpedienteQuipuscan = false;
+    }
+  }
+
+  formatearPesoBytes(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   // =========================================================================
