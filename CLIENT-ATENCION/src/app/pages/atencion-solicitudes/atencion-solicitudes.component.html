@@ -321,7 +321,19 @@
                 <td class="td-center">{{ sol.fechaInicio }}</td>
                 <td class="td-center">{{ sol.fechaFinal }}</td>
                 <td class="td-center">{{ sol.tiempoTranscurrido }}</td>
-                <td class="td-center">{{ sol.nroExpediente }}</td>
+                <td class="td-center">
+                  <div>{{ sol.nroExpediente }}</div>
+                  <div class="etiqueta-quipuscan-box" *ngIf="tieneQuipuscanSolicitud(sol)" style="margin-top: 4px; justify-content: center;">
+                    <button
+                      type="button"
+                      class="tag-quipuscan tag-quipuscan-btn"
+                      (click)="abrirModalQuipuscanDesdeTabla(sol, $event)"
+                      title="Expediente en Quipuscan - Clic para ver portada y detalles"
+                    >
+                      <i class="fa-solid fa-cube"></i> quipuscan
+                    </button>
+                  </div>
+                </td>
               </tr>
 
               <tr *ngIf="solicitudesPaginadas.length === 0">

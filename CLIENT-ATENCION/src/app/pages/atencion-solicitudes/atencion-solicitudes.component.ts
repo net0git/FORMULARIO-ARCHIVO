@@ -129,6 +129,10 @@ export class AtencionSolicitudesComponent implements OnInit {
   quipuscanMap = new Map<string, QuipuscanExpediente>();
   solicitudTieneQuipuscan = false;
 
+  // Mapa de persistencia Quipuscan por idSolicitud (para mantener el acceso después de guardar)
+  solicitudesQuipuscanMap = new Map<number, QuipuscanExpediente>();
+  solicitudesExpedienteArchivoMap = new Map<number, ExpedienteArchivoCentral>();
+
   // 6. Modal Constancia PDF y Visor de Documentos Adjuntos (Pág. 20 y 21)
   mostrarModalPdf = false;
   documentoVisorActivo: DocumentoAdjunto | null = null;
@@ -167,6 +171,8 @@ export class AtencionSolicitudesComponent implements OnInit {
       return;
     }
 
+    this.cargarVinculosQuipuscan();
+
     this.archivoService.solicitudes$.subscribe((lista) => {
       this.todasLasSolicitudes = lista;
       this.aplicarFiltros();
@@ -176,6 +182,8 @@ export class AtencionSolicitudesComponent implements OnInit {
           this.solicitudActiva = actualizada;
         }
       }
+      // Verificar solicitudes que tengan Quipuscan disponible
+      this.verificarQuipuscanParaListaSolicitudes(lista);
     });
 
     this.archivoService.usuarios$.subscribe((usuarios) => {
@@ -587,16 +595,28 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.expedienteSeleccionadoDetalle = null;
     this.mensajeErrorBusquedaArchivo = '';
 
-    const nroSol = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
-    if (nroSol) {
-      this.quipuscanService.obtenerDetalleExpediente(nroSol).then((res) => {
-        this.solicitudTieneQuipuscan = Boolean(res && res.length > 0);
-        if (this.solicitudTieneQuipuscan) {
-          this.quipuscanMap.set(nroSol, res[0]);
-        }
-      });
+    // Recuperar vínculo previo de Quipuscan si ya se guardó para esta solicitud
+    const vinculoPrevio = this.solicitudesQuipuscanMap.get(sol.idSolicitud);
+    if (vinculoPrevio) {
+      this.solicitudTieneQuipuscan = true;
+      this.quipuscanMap.set(vinculoPrevio.nro_expediente, vinculoPrevio);
+      const expArchivoPrevio = this.solicitudesExpedienteArchivoMap.get(sol.idSolicitud);
+      if (expArchivoPrevio) {
+        this.expedienteSeleccionadoDetalle = expArchivoPrevio;
+      }
     } else {
-      this.solicitudTieneQuipuscan = false;
+      const nroSol = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
+      if (nroSol) {
+        this.quipuscanService.obtenerDetalleExpediente(nroSol).then((res) => {
+          this.solicitudTieneQuipuscan = Boolean(res && res.length > 0);
+          if (this.solicitudTieneQuipuscan) {
+            this.quipuscanMap.set(nroSol, res[0]);
+            this.guardarVinculoQuipuscan(sol.idSolicitud, nroSol, res[0]);
+          }
+        });
+      } else {
+        this.solicitudTieneQuipuscan = false;
+      }
     }
 
     if (tieneRegistroGuardado) {
@@ -770,6 +790,17 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.ubicacionForm.paquete = item.codg_paquet || '';
     this.expedienteSeleccionadoDetalle = item;
 
+    if (this.solicitudActiva) {
+      if (item.nro_formateado) {
+        this.solicitudActiva.codigoCompletoExpediente = item.nro_formateado;
+      }
+      const infoQuipuscan = this.obtenerQuipuscan(item);
+      if (infoQuipuscan) {
+        this.solicitudTieneQuipuscan = true;
+        this.guardarVinculoQuipuscan(this.solicitudActiva.idSolicitud, infoQuipuscan.nro_expediente, infoQuipuscan, item);
+      }
+    }
+
     // Desplazamiento suave hacia el formulario para que el usuario verifique y guarde cuando lo desee
     setTimeout(() => {
       const formEl = document.getElementById('seccion-formulario-ubicacion');
@@ -791,6 +822,23 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.solicitudActiva.fila = (this.ubicacionForm.fila || '').trim().toUpperCase();
     this.solicitudActiva.columna = (this.ubicacionForm.columna || '').trim().toUpperCase();
     this.solicitudActiva.paquete = (this.ubicacionForm.paquete || '').trim().toUpperCase();
+
+    // Si se seleccionó un expediente de los resultados, asegurar la vinculación permanente de Quipuscan
+    if (this.expedienteSeleccionadoDetalle) {
+      if (this.expedienteSeleccionadoDetalle.nro_formateado) {
+        this.solicitudActiva.codigoCompletoExpediente = this.expedienteSeleccionadoDetalle.nro_formateado;
+      }
+      const infoQuipuscan = this.obtenerQuipuscan(this.expedienteSeleccionadoDetalle);
+      if (infoQuipuscan) {
+        this.solicitudTieneQuipuscan = true;
+        this.guardarVinculoQuipuscan(
+          this.solicitudActiva.idSolicitud,
+          infoQuipuscan.nro_expediente,
+          infoQuipuscan,
+          this.expedienteSeleccionadoDetalle
+        );
+      }
+    }
 
     await this.archivoService.actualizarUbicacion(this.solicitudActiva.idSolicitud, this.ubicacionForm);
     this.mostrarModalUbicacion = false;
@@ -933,7 +981,101 @@ export class AtencionSolicitudesComponent implements OnInit {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  // =========================================================================
+  // PERSISTENCIA Y ASOCIACIÓN DE QUIPUSCAN CON SOLICITUDES
+  // =========================================================================
+  private cargarVinculosQuipuscan(): void {
+    try {
+      const raw = localStorage.getItem('pj_archivo_quipuscan_v1');
+      if (raw) {
+        const mapa = JSON.parse(raw);
+        Object.keys(mapa).forEach((idStr) => {
+          const entry = mapa[idStr];
+          if (entry && entry.quipuscan) {
+            const idSol = Number(idStr);
+            this.solicitudesQuipuscanMap.set(idSol, entry.quipuscan);
+            this.quipuscanMap.set(entry.quipuscan.nro_expediente, entry.quipuscan);
+            if (entry.expedienteArchivo) {
+              this.solicitudesExpedienteArchivoMap.set(idSol, entry.expedienteArchivo);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Error cargando vínculos Quipuscan:', e);
+    }
+  }
+
+  guardarVinculoQuipuscan(
+    idSolicitud: number,
+    nroExpediente: string,
+    quipuscan: QuipuscanExpediente,
+    expArchivo?: ExpedienteArchivoCentral
+  ): void {
+    this.solicitudesQuipuscanMap.set(idSolicitud, quipuscan);
+    this.quipuscanMap.set(quipuscan.nro_expediente, quipuscan);
+    if (expArchivo) {
+      this.solicitudesExpedienteArchivoMap.set(idSolicitud, expArchivo);
+    }
+
+    try {
+      const raw = localStorage.getItem('pj_archivo_quipuscan_v1');
+      const mapa = raw ? JSON.parse(raw) : {};
+      mapa[idSolicitud] = {
+        nroExpediente,
+        quipuscan,
+        expedienteArchivo: expArchivo || null
+      };
+      localStorage.setItem('pj_archivo_quipuscan_v1', JSON.stringify(mapa));
+    } catch (e) {
+      console.warn('Error guardando vínculo Quipuscan:', e);
+    }
+  }
+
+  private async verificarQuipuscanParaListaSolicitudes(solicitudes: SolicitudArchivo[]): Promise<void> {
+    const sinVerificar = (solicitudes || []).filter(
+      (s) => !this.solicitudesQuipuscanMap.has(s.idSolicitud) && (s.codigoCompletoExpediente || s.nroExpediente)
+    );
+    for (const sol of sinVerificar.slice(0, 15)) {
+      const nro = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
+      if (nro) {
+        const res = await this.quipuscanService.obtenerDetalleExpediente(nro);
+        if (res && res.length > 0) {
+          this.guardarVinculoQuipuscan(sol.idSolicitud, nro, res[0]);
+        }
+      }
+    }
+  }
+
+  tieneQuipuscanSolicitud(sol: SolicitudArchivo): boolean {
+    if (!sol) return false;
+    if (this.solicitudesQuipuscanMap.has(sol.idSolicitud)) return true;
+    const nro = (sol.codigoCompletoExpediente || sol.nroExpediente || '').trim();
+    return Boolean(nro && this.quipuscanMap.has(nro));
+  }
+
+  abrirModalQuipuscanDesdeTabla(sol: SolicitudArchivo, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.solicitudActiva = sol;
+
+    if (this.solicitudesQuipuscanMap.has(sol.idSolicitud)) {
+      const info = this.solicitudesQuipuscanMap.get(sol.idSolicitud)!;
+      const expArchivo = this.solicitudesExpedienteArchivoMap.get(sol.idSolicitud) || null;
+      this.expedienteQuipuscanActivo = info;
+      this.expedienteArchivoActivo = expArchivo;
+      const urlPortada = this.quipuscanService.obtenerUrlPortada(info.nro_expediente, info.codigo || '');
+      this.urlPortadaQuipuscanSegura = this.sanitizer.bypassSecurityTrustResourceUrl(urlPortada);
+      this.mostrarModalQuipuscan = true;
+      return;
+    }
+
+    this.abrirModalQuipuscanDesdeSolicitud(event);
+  }
+
   tieneQuipuscanUbicacionActual(): boolean {
+    if (this.solicitudActiva && this.solicitudesQuipuscanMap.has(this.solicitudActiva.idSolicitud)) {
+      return true;
+    }
     if (this.expedienteSeleccionadoDetalle && this.tieneQuipuscan(this.expedienteSeleccionadoDetalle)) {
       return true;
     }
@@ -950,6 +1092,17 @@ export class AtencionSolicitudesComponent implements OnInit {
   }
 
   abrirModalQuipuscanUbicacionActual(): void {
+    if (this.solicitudActiva && this.solicitudesQuipuscanMap.has(this.solicitudActiva.idSolicitud)) {
+      const info = this.solicitudesQuipuscanMap.get(this.solicitudActiva.idSolicitud)!;
+      const expArchivo = this.solicitudesExpedienteArchivoMap.get(this.solicitudActiva.idSolicitud) || null;
+      this.expedienteQuipuscanActivo = info;
+      this.expedienteArchivoActivo = expArchivo;
+      const urlPortada = this.quipuscanService.obtenerUrlPortada(info.nro_expediente, info.codigo || '');
+      this.urlPortadaQuipuscanSegura = this.sanitizer.bypassSecurityTrustResourceUrl(urlPortada);
+      this.mostrarModalQuipuscan = true;
+      return;
+    }
+
     if (this.expedienteSeleccionadoDetalle && this.tieneQuipuscan(this.expedienteSeleccionadoDetalle)) {
       this.abrirModalQuipuscan(this.expedienteSeleccionadoDetalle);
     } else {
