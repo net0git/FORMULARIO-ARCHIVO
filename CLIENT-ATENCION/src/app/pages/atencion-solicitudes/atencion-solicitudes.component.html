@@ -1207,6 +1207,10 @@
       <div class="modal-action-section">
         <label>Accion</label>
         <div class="modal-action-buttons-row">
+          <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
+            <i class="fa-regular fa-floppy-disk"></i> Guardar
+          </button>
+
           <!-- Botón Quipuscan al otro extremo de Guardar -->
           <button
             type="button"
@@ -1216,10 +1220,6 @@
             title="Ver digitalización y portada en Quipuscan"
           >
             <i class="fa-solid fa-cube"></i> quipuscan
-          </button>
-
-          <button type="button" class="btn-modal-save" (click)="guardarUbicacionExpediente()">
-            <i class="fa-regular fa-floppy-disk"></i> Guardar
           </button>
         </div>
       </div>

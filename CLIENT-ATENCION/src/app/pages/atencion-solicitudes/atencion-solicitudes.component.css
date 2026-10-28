@@ -738,6 +738,7 @@
 }
 
 .btn-modal-quipuscan {
+  margin-left: auto;
   background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
   color: #ffffff;
   border: none;
