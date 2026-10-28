@@ -2,23 +2,26 @@ import { Injectable } from '@angular/core';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 
+export type CategoriaCensura =
+  | 'DEMANDANTE'
+  | 'DEMANDADO'
+  | 'AGRAVIADO'
+  | 'DOMICILIO'
+  | 'TELEFONO'
+  | 'DNI'
+  | 'DATO_PERSONAL'
+  | 'OTRO';
+
 export interface SujetoCensura {
   id: string;
-  categoria: 'DEMANDANTE' | 'DEMANDADO' | 'AGRAVIADO' | 'DOMICILIO' | 'OTRO';
+  categoria: CategoriaCensura;
+  campo?: string; // Ej: "AGRAVIADA: Teléfono", "DEMANDADO: Domicilio"
   valor: string;
   etiqueta?: string;
   seleccionado: boolean;
   censurarEtiqueta?: boolean;
-  coincidencias?: number;
-}
-
-export interface BoundingBoxCensura {
-  pageNumber: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  texto: string;
+  variantes?: string[]; // Ej: ["VICTORIA HINOJOSA PACCO", "HINOJOSA PACCO VICTORIA"]
+  esDatoPersonal?: boolean;
 }
 
 export interface ResultadoAnalisisPdf {
@@ -83,7 +86,7 @@ export class PdfCensuraService {
         if (ocrTexto && ocrTexto.trim().length > 0) {
           fuePorOcr = true;
           textoTotal = ocrTexto + '\n' + textoTotal;
-          sujetos = this.extraerSujetosDesdeTexto(ocrTexto);
+          sujetos = this.extraerSujetosDesdeTexto(textoTotal);
         }
       } catch (err) {
         console.warn('No se pudo ejecutar OCR secundario:', err);
@@ -102,7 +105,7 @@ export class PdfCensuraService {
   }
 
   /**
-   * Extrae los sujetos procesales (DEMANDANTE, DEMANDADO, AGRAVIADO, etc.) del texto plano
+   * Extrae los sujetos procesales de la carátula y todos los DATOS PERSONALES DE LAS PARTES
    */
   extraerSujetosDesdeTexto(texto: string): SujetoCensura[] {
     const lineas = texto
@@ -112,7 +115,10 @@ export class PdfCensuraService {
 
     const sujetos: SujetoCensura[] = [];
 
-    const patrones = [
+    // =======================================================================
+    // 1. EXTRAER SUJETOS PROCESALES DE CARÁTULA
+    // =======================================================================
+    const patronesSujetos = [
       {
         key: 'DEMANDANTE' as const,
         etiqueta: 'DEMANDANTE',
@@ -133,19 +139,19 @@ export class PdfCensuraService {
     for (let i = 0; i < lineas.length; i++) {
       const linea = lineas[i];
 
-      for (const pat of patrones) {
+      for (const pat of patronesSujetos) {
         if (pat.regex.test(linea)) {
           let valor = linea.replace(pat.regex, '').trim();
 
-          // Si el nombre viene en la siguiente línea (común en OCR)
+          // Si el nombre viene en la siguiente línea
           if (!valor && i + 1 < lineas.length) {
             const sig = lineas[i + 1];
-            if (!patrones.some(p => p.regex.test(sig)) && !/^domic/i.test(sig) && !/^exp/i.test(sig)) {
+            if (!patronesSujetos.some(p => p.regex.test(sig)) && !/^domic/i.test(sig) && !/^exp/i.test(sig)) {
               valor = sig;
             }
           }
 
-          // Extraer Domicilio Legal si está presente en la misma línea o siguiente
+          // Extraer Domicilio Legal si está presente
           let domicilio = '';
           const matchDomic = valor.match(/Domic(?:ilio)?\s*(?:Legal|\.)?\s*[:\-]?\s*([^\r\n]+)/i);
           if (matchDomic) {
@@ -155,24 +161,26 @@ export class PdfCensuraService {
 
           valor = valor.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
 
-          // Filtrar valores no útiles
           if (valor && valor.length > 2 && !/^<no definido>/i.test(valor)) {
             const yaExiste = sujetos.some(
-              s => s.categoria === pat.key && s.valor.toLowerCase() === valor.toLowerCase()
+              s => s.categoria === pat.key && this.sonMismoNombre(s.valor, valor)
             );
             if (!yaExiste) {
+              const variantes = this.generarVariantesNombre(valor);
               sujetos.push({
                 id: 'suj_' + Math.random().toString(36).substring(2, 9),
                 categoria: pat.key,
+                campo: 'Nombre de ' + pat.etiqueta,
                 etiqueta: pat.etiqueta,
                 valor: valor.toUpperCase(),
+                variantes,
                 seleccionado: true,
-                censurarEtiqueta: false
+                censurarEtiqueta: false,
+                esDatoPersonal: false
               });
             }
           }
 
-          // Si se detectó domicilio válido (no "<No Definido>"), agregar como elemento opcional
           if (domicilio && !/^<no definido>/i.test(domicilio) && domicilio.length > 3) {
             const yaExisteDom = sujetos.some(
               s => s.categoria === 'DOMICILIO' && s.valor.toLowerCase() === domicilio.toLowerCase()
@@ -181,11 +189,138 @@ export class PdfCensuraService {
               sujetos.push({
                 id: 'dom_' + Math.random().toString(36).substring(2, 9),
                 categoria: 'DOMICILIO',
-                etiqueta: 'DOMICILIO',
+                campo: `${pat.etiqueta}: Domicilio Legal`,
+                etiqueta: 'Domic Legal',
                 valor: domicilio.toUpperCase(),
-                seleccionado: false,
-                censurarEtiqueta: false
+                seleccionado: true,
+                censurarEtiqueta: false,
+                esDatoPersonal: true
               });
+            }
+          }
+        }
+      }
+    }
+
+    // =======================================================================
+    // 2. EXTRAER SECCIÓN "DATOS PERSONALES DE LAS PARTES"
+    // =======================================================================
+    let parteActual = '';
+
+    for (let i = 0; i < lineas.length; i++) {
+      const l = lineas[i];
+
+      // Detectar encabezado de la parte (ej. DATOS DE LA AGRAVIADA, DATOS DEL DEMANDADO)
+      const matchParte = l.match(/DATOS\s+DE\s+(?:LA|EL)\s+(AGRAVIAD[AO]|DEMANDAD[AO]|IMPUTAD[AO]|DENUNCIANTE|SENTENCIAD[AO])/i);
+      if (matchParte) {
+        parteActual = matchParte[1].toUpperCase();
+      }
+
+      // Reglas para cada campo personal sensible
+      const camposPersonales = [
+        {
+          campo: 'Nombres',
+          regex: /^Nombres?\s*[:\-]\s*(.+)/i,
+          categoria: (parteActual.includes('DEMAND') ? 'DEMANDADO' : (parteActual.includes('AGRAV') ? 'AGRAVIADO' : 'DATO_PERSONAL')) as CategoriaCensura,
+          esNombre: true
+        },
+        {
+          campo: 'Edad',
+          regex: /^Edad\s*[:\-]\s*(.+)/i,
+          categoria: 'DATO_PERSONAL' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Natural de',
+          regex: /^Natural\s+de\s*[:\-]\s*(.+)/i,
+          categoria: 'DATO_PERSONAL' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Estado Civil',
+          regex: /^Estado\s+Civil\s*[:\-]\s*(.+)/i,
+          categoria: 'DATO_PERSONAL' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Ocupación',
+          regex: /^Ocupaci[oó]n\s*[:\-]\s*(.+)/i,
+          categoria: 'DATO_PERSONAL' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Identificado',
+          regex: /^(?:Identificad[oa]|DNI)\s*[:\-]\s*(.+)/i,
+          categoria: 'DNI' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Domicilio',
+          regex: /^Domicilio\s*[:\-]\s*(.+)/i,
+          categoria: 'DOMICILIO' as CategoriaCensura,
+          esNombre: false
+        },
+        {
+          campo: 'Teléfono',
+          regex: /^Tel[eé]fono\s*[:\-]\s*(.+)/i,
+          categoria: 'TELEFONO' as CategoriaCensura,
+          esNombre: false
+        }
+      ];
+
+      for (const cp of camposPersonales) {
+        const m = l.match(cp.regex);
+        if (m && m[1]) {
+          let valorExtraido = m[1].trim().replace(/^[:\-\s]+|[:\-\s]+$/g, '');
+          if (valorExtraido && valorExtraido !== '<No Definido>' && valorExtraido !== 'S/D/P/V') {
+            const prefijoParte = parteActual ? `${parteActual}: ` : '';
+            const nombreCampo = `${prefijoParte}${cp.campo}`;
+
+            if (cp.esNombre) {
+              // Si es un nombre, verificar si coincide con alguno existente en carátula
+              const existente = sujetos.find(s => this.sonMismoNombre(s.valor, valorExtraido));
+              if (existente) {
+                // Agregar esta variante específica si no está
+                if (!existente.variantes) existente.variantes = [existente.valor];
+                const upperVal = valorExtraido.toUpperCase();
+                if (!existente.variantes.includes(upperVal)) {
+                  existente.variantes.push(upperVal);
+                }
+                const masVariantes = this.generarVariantesNombre(valorExtraido);
+                for (const v of masVariantes) {
+                  if (!existente.variantes.includes(v)) existente.variantes.push(v);
+                }
+              } else {
+                const variantes = this.generarVariantesNombre(valorExtraido);
+                sujetos.push({
+                  id: 'pers_' + Math.random().toString(36).substring(2, 9),
+                  categoria: cp.categoria,
+                  campo: nombreCampo,
+                  etiqueta: cp.campo,
+                  valor: valorExtraido.toUpperCase(),
+                  variantes,
+                  seleccionado: true,
+                  censurarEtiqueta: false,
+                  esDatoPersonal: true
+                });
+              }
+            } else {
+              // Es dato personal (Edad, Natural de, Estado Civil, Ocupación, DNI, Domicilio, Teléfono)
+              const yaExiste = sujetos.some(
+                s => s.campo === nombreCampo && s.valor.toLowerCase() === valorExtraido.toLowerCase()
+              );
+              if (!yaExiste) {
+                sujetos.push({
+                  id: 'pers_' + Math.random().toString(36).substring(2, 9),
+                  categoria: cp.categoria,
+                  campo: nombreCampo,
+                  etiqueta: cp.campo,
+                  valor: valorExtraido,
+                  seleccionado: true,
+                  censurarEtiqueta: false,
+                  esDatoPersonal: true
+                });
+              }
             }
           }
         }
@@ -196,6 +331,55 @@ export class PdfCensuraService {
   }
 
   /**
+   * Genera variantes y permutaciones de nombres (ej. Apellidos Nombres <-> Nombres Apellidos)
+   */
+  generarVariantesNombre(nombre: string): string[] {
+    const palabras = nombre
+      .trim()
+      .split(/\s+/)
+      .map(p => p.replace(/[,;.]/g, '').toUpperCase())
+      .filter(p => p.length > 1);
+
+    const variantes = new Set<string>();
+    if (palabras.length === 0) return [];
+
+    variantes.add(palabras.join(' '));
+
+    // Si tiene 3 palabras (ej: HINOJOSA PACCO VICTORIA)
+    if (palabras.length === 3) {
+      // Nombres Apellidos: VICTORIA HINOJOSA PACCO
+      variantes.add(`${palabras[2]} ${palabras[0]} ${palabras[1]}`);
+      // Con coma: HINOJOSA PACCO, VICTORIA
+      variantes.add(`${palabras[0]} ${palabras[1]}, ${palabras[2]}`);
+      // Otra permutación posible
+      variantes.add(`${palabras[1]} ${palabras[2]} ${palabras[0]}`);
+    } else if (palabras.length === 4) {
+      // Si tiene 4 palabras (ej: PEREZ HUAMANI JUAN CARLOS)
+      // Nombres Apellidos: JUAN CARLOS PEREZ HUAMANI
+      variantes.add(`${palabras[2]} ${palabras[3]} ${palabras[0]} ${palabras[1]}`);
+      // Con coma: PEREZ HUAMANI, JUAN CARLOS
+      variantes.add(`${palabras[0]} ${palabras[1]}, ${palabras[2]} ${palabras[3]}`);
+      // Un solo nombre adelante: JUAN PEREZ HUAMANI CARLOS
+      variantes.add(`${palabras[2]} ${palabras[0]} ${palabras[1]} ${palabras[3]}`);
+    } else if (palabras.length === 2) {
+      // Si tiene 2 palabras: PEREZ JUAN <-> JUAN PEREZ
+      variantes.add(`${palabras[1]} ${palabras[0]}`);
+      variantes.add(`${palabras[0]}, ${palabras[1]}`);
+    }
+
+    return Array.from(variantes);
+  }
+
+  /**
+   * Determina si dos cadenas corresponden al mismo nombre independientemente del orden
+   */
+  sonMismoNombre(nombre1: string, nombre2: string): boolean {
+    const tokens1 = this.normalizarTexto(nombre1).split(' ').filter(w => w.length > 1).sort().join(' ');
+    const tokens2 = this.normalizarTexto(nombre2).split(' ').filter(w => w.length > 1).sort().join(' ');
+    return tokens1.length > 3 && tokens1 === tokens2;
+  }
+
+  /**
    * Ejecuta OCR sobre la portada / primera página con Tesseract.js (para escaneados de imagen pura)
    */
   private async ejecutarOcrPrimeraPagina(
@@ -203,7 +387,7 @@ export class PdfCensuraService {
     onProgreso?: (mensaje: string, porcentaje: number) => void
   ): Promise<string> {
     const page = await doc.getPage(1);
-    const viewport = page.getViewport({ scale: 2.0 }); // Alta resolución para OCR preciso
+    const viewport = page.getViewport({ scale: 2.0 });
 
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
@@ -229,6 +413,7 @@ export class PdfCensuraService {
 
   /**
    * Aplica la censura con rectángulos negros sobre el PDF original
+   * Soporta variantes de nombres, datos personales de las partes y permutaciones en todo el documento.
    */
   async censurarPdf(
     pdfOriginalBytes: ArrayBuffer,
@@ -239,23 +424,39 @@ export class PdfCensuraService {
       colorHex?: string;
     } = {}
   ): Promise<{ pdfBytes: Uint8Array; totalCoincidencias: number }> {
-    const { censurarTodasLasOcurrencias = true, censurarEtiquetas = false } = opciones;
+    const { censurarEtiquetas = false } = opciones;
 
     const terminosValidos = sujetosACensurar
       .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
-      .map(s => ({
-        valor: s.valor.trim(),
-        etiqueta: s.etiqueta,
-        censurarEtiqueta: s.censurarEtiqueta || censurarEtiquetas
-      }));
+      .map(s => {
+        const todasLasVariantes = new Set<string>();
+        todasLasVariantes.add(s.valor.trim());
+        if (s.variantes && s.variantes.length > 0) {
+          s.variantes.forEach(v => todasLasVariantes.add(v.trim()));
+        }
+        // Generar también variantes sobre la marcha
+        const varsCalculadas = this.generarVariantesNombre(s.valor);
+        varsCalculadas.forEach(v => todasLasVariantes.add(v));
+
+        const palabrasClave = s.valor
+          .split(/\s+/)
+          .map(w => this.normalizarTexto(w))
+          .filter(w => w.length > 1);
+
+        return {
+          valorOriginal: s.valor.trim(),
+          variantes: Array.from(todasLasVariantes),
+          palabrasClave,
+          etiqueta: s.etiqueta,
+          censurarEtiqueta: s.censurarEtiqueta || censurarEtiquetas
+        };
+      });
 
     if (terminosValidos.length === 0) {
       return { pdfBytes: new Uint8Array(pdfOriginalBytes.slice(0)), totalCoincidencias: 0 };
     }
 
-    // 1. Clonar copias independientes para PDF.js y pdf-lib.
-    // Esto previene el error "Cannot perform Construct on a detached ArrayBuffer",
-    // ya que PDF.js transfiere su buffer al Web Worker desacoplándolo del hilo principal.
+    // Clonar copias independientes para PDF.js y pdf-lib
     const bytesParaPdfJs = new Uint8Array(pdfOriginalBytes.slice(0));
     const bytesParaPdfLib = new Uint8Array(pdfOriginalBytes.slice(0));
 
@@ -289,52 +490,48 @@ export class PdfCensuraService {
         });
       }
 
-      // Buscar coincidencias de cada término
+      // 1. Búsqueda directa y por variantes en cada item individual
       for (const t of terminosValidos) {
-        // Palabras que componen el término
-        const palabras = t.valor.split(/\s+/).filter(p => p.length > 1);
-
-        // Coincidencia por línea o frase completa
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          const textoItem = this.normalizarTexto(item.str);
-          const terminoNorm = this.normalizarTexto(t.valor);
+          const textoItemNorm = this.normalizarTexto(item.str);
 
           let coincide = false;
-          let boxX = item.tx;
-          let boxY = item.ty;
-          let boxW = item.w;
-          let boxH = item.h;
 
-          // Si el item contiene el término completo
-          if (textoItem.includes(terminoNorm)) {
-            coincide = true;
-          } else {
-            // O si coincide con las palabras clave principales del nombre
-            const coincidePalabras = palabras.every(p => textoItem.includes(this.normalizarTexto(p)));
-            if (coincidePalabras && palabras.length > 0) {
+          // Verificar contra todas las variantes conocidas
+          for (const varTxt of t.variantes) {
+            const varNorm = this.normalizarTexto(varTxt);
+            if (textoItemNorm.includes(varNorm)) {
+              coincide = true;
+              break;
+            }
+          }
+
+          // Si contiene todas las palabras clave del nombre juntas en el mismo item
+          if (!coincide && t.palabrasClave.length >= 2) {
+            const todasEnItem = t.palabrasClave.every(p => textoItemNorm.includes(p));
+            if (todasEnItem) {
               coincide = true;
             }
           }
 
-          // Si coincide, dibujar recuadro negro
           if (coincide) {
             totalCoincidencias++;
             const padding = 3;
             pagePdfLib.drawRectangle({
-              x: Math.max(0, boxX - padding),
-              y: Math.max(0, boxY - padding),
-              width: Math.min(pageWidth - boxX, boxW + padding * 2),
-              height: boxH + padding * 2,
+              x: Math.max(0, item.tx - padding),
+              y: Math.max(0, item.ty - padding),
+              width: Math.min(pageWidth - item.tx, item.w + padding * 2),
+              height: item.h + padding * 2,
               color: rgb(0, 0, 0),
               opacity: 1.0
             });
           }
 
-          // Si también se debe censurar la etiqueta correspondiente (ej: DEMANDANTE:)
+          // Si también se debe censurar la etiqueta correspondiente (ej: DEMANDANTE:, Domicilio:)
           if (t.censurarEtiqueta && t.etiqueta) {
             const etiqNorm = this.normalizarTexto(t.etiqueta);
-            if (textoItem.includes(etiqNorm)) {
+            if (textoItemNorm.includes(etiqNorm)) {
               totalCoincidencias++;
               const padding = 2;
               pagePdfLib.drawRectangle({
@@ -350,26 +547,44 @@ export class PdfCensuraService {
         }
       }
 
-      // Si no hubo coincidencia por items individuales (por ejemplo porque el texto viene fragmentado),
-      // buscar por subsecuencias de items contiguos
+      // 2. Búsqueda por ventana deslizante de items contiguos (para frases divididas o nombres con orden invertido)
       for (const t of terminosValidos) {
-        const terminoNorm = this.normalizarTexto(t.valor);
         for (let i = 0; i < items.length; i++) {
-          let accum = '';
+          let accumNorm = '';
           let minX = items[i].tx;
           let maxX = items[i].tx + items[i].w;
           let minY = items[i].ty;
           let maxH = items[i].h;
 
+          // Ventana de hasta 8 items contiguos
           for (let j = i; j < Math.min(items.length, i + 8); j++) {
-            accum += ' ' + this.normalizarTexto(items[j].str);
-            accum = accum.trim();
+            accumNorm += ' ' + this.normalizarTexto(items[j].str);
+            accumNorm = accumNorm.trim();
             minX = Math.min(minX, items[j].tx);
             maxX = Math.max(maxX, items[j].tx + items[j].w);
             minY = Math.min(minY, items[j].ty);
             maxH = Math.max(maxH, items[j].h);
 
-            if (accum.includes(terminoNorm)) {
+            let coincideVentana = false;
+
+            // Coincidencia con alguna variante completa
+            for (const varTxt of t.variantes) {
+              const varNorm = this.normalizarTexto(varTxt);
+              if (accumNorm.includes(varNorm)) {
+                coincideVentana = true;
+                break;
+              }
+            }
+
+            // O coincidencia si todas las palabras clave del nombre están presentes en la ventana contigua
+            if (!coincideVentana && t.palabrasClave.length >= 2) {
+              const todasPresentes = t.palabrasClave.every(p => accumNorm.includes(p));
+              if (todasPresentes) {
+                coincideVentana = true;
+              }
+            }
+
+            if (coincideVentana) {
               totalCoincidencias++;
               const padding = 3;
               pagePdfLib.drawRectangle({
@@ -380,6 +595,7 @@ export class PdfCensuraService {
                 color: rgb(0, 0, 0),
                 opacity: 1.0
               });
+              i = j; // Avanzar el cursor
               break;
             }
           }

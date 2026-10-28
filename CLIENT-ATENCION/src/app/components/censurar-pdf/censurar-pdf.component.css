@@ -890,6 +890,97 @@
   font-size: 11px;
 }
 
+/* GRUPOS DE CENSURA: SUJETOS Y DATOS PERSONALES */
+.grupo-seccion {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.grupo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.grupo-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.grupo-header.personal-header .grupo-title {
+  color: #0369a1;
+}
+
+.grupo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-mini-link {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-mini-link:hover {
+  text-decoration: underline;
+}
+
+/* VARIANTES DE NOMBRES */
+.variantes-box {
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.variantes-label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.variante-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* DATOS PERSONALES */
+.card-personal.checked {
+  border-left-color: #0ea5e9;
+}
+
+.badge-campo-personal {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ANIMACIONES */
 .fade-in {
   animation: fadeIn 0.25s ease-in-out;

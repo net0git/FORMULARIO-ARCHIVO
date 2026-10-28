@@ -2,7 +2,12 @@ import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { PdfCensuraService, SujetoCensura, ResultadoAnalisisPdf } from '../../services/pdf-censura.service';
+import {
+  PdfCensuraService,
+  SujetoCensura,
+  ResultadoAnalisisPdf,
+  CategoriaCensura
+} from '../../services/pdf-censura.service';
 
 @Component({
   selector: 'app-censurar-pdf',
@@ -29,7 +34,7 @@ export class CensurarPdfComponent implements OnDestroy {
   // Lista de datos detectados para censurar
   sujetos: SujetoCensura[] = [];
   nuevoTextoManual = '';
-  nuevaCategoriaManual: 'DEMANDANTE' | 'DEMANDADO' | 'AGRAVIADO' | 'OTRO' = 'DEMANDANTE';
+  nuevaCategoriaManual: CategoriaCensura = 'DEMANDANTE';
   censurarEtiquetas = false;
 
   // Estado de la censura aplicada
@@ -142,29 +147,56 @@ export class CensurarPdfComponent implements OnDestroy {
   // =========================================================================
   // GESTIÓN DE SUJETOS Y TÉRMINOS A CENSURAR
   // =========================================================================
+  get sujetosPrincipales(): SujetoCensura[] {
+    return this.sujetos.filter(s => !s.esDatoPersonal);
+  }
+
+  get datosPersonales(): SujetoCensura[] {
+    return this.sujetos.filter(s => s.esDatoPersonal);
+  }
+
   seleccionarTodos(valor: boolean): void {
     this.sujetos.forEach(s => (s.seleccionado = valor));
+  }
+
+  seleccionarPorGrupo(tipo: 'sujetos' | 'personales', valor: boolean): void {
+    this.sujetos.forEach(s => {
+      if (tipo === 'sujetos' && !s.esDatoPersonal) {
+        s.seleccionado = valor;
+      } else if (tipo === 'personales' && s.esDatoPersonal) {
+        s.seleccionado = valor;
+      }
+    });
   }
 
   get cantidadSeleccionados(): number {
     return this.sujetos.filter(s => s.seleccionado).length;
   }
 
-  eliminarSujeto(index: number): void {
-    this.sujetos.splice(index, 1);
+  eliminarSujeto(id: string): void {
+    const idx = this.sujetos.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      this.sujetos.splice(idx, 1);
+    }
   }
 
   agregarSujetoManual(): void {
     const texto = this.nuevoTextoManual.trim();
     if (!texto) return;
 
+    const variantes = this.pdfCensuraService.generarVariantesNombre(texto);
+    const esPersonal = ['DOMICILIO', 'TELEFONO', 'DNI', 'DATO_PERSONAL'].includes(this.nuevaCategoriaManual);
+
     this.sujetos.push({
       id: 'manual_' + Math.random().toString(36).substring(2, 9),
       categoria: this.nuevaCategoriaManual,
+      campo: this.nuevaCategoriaManual,
       etiqueta: this.nuevaCategoriaManual,
       valor: texto.toUpperCase(),
+      variantes,
       seleccionado: true,
-      censurarEtiqueta: false
+      censurarEtiqueta: false,
+      esDatoPersonal: esPersonal
     });
 
     this.nuevoTextoManual = '';

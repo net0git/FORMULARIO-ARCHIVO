@@ -9,7 +9,7 @@
       </div>
       <div class="header-text">
         <h2>Herramienta de Censura de PDF</h2>
-        <p>Anonimización y protección de datos judiciales (Demandante, Demandado, Agraviado)</p>
+        <p>Anonimización de sujetos procesales, datos personales y variantes de nombres</p>
       </div>
     </div>
 
@@ -81,7 +81,7 @@
       <div class="section-title-row">
         <div>
           <h3>Datos Identificados para Censurar</h3>
-          <p class="section-desc">Determina si estás de acuerdo marcando o desmarcando cada dato:</p>
+          <p class="section-desc">Revisa y determina si estás de acuerdo con cada dato a censurar:</p>
         </div>
         <div class="quick-toggle-btns" *ngIf="sujetos.length > 0">
           <button type="button" class="btn-text-action" (click)="seleccionarTodos(true)">Todos</button>
@@ -94,56 +94,130 @@
       <div *ngIf="sujetos.length === 0" class="empty-sujetos-alert">
         <i class="fa-solid fa-circle-info"></i>
         <div>
-          <strong>No se detectaron sujetos automáticamente en la portada.</strong>
-          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario a continuación.</p>
+          <strong>No se detectaron sujetos automáticamente en la portada ni en datos personales.</strong>
+          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario inferior.</p>
         </div>
       </div>
 
-      <!-- Lista interactiva de sujetos -->
-      <div class="sujetos-list" *ngIf="sujetos.length > 0">
-        <div
-          *ngFor="let s of sujetos; let i = index"
-          class="sujeto-card"
-          [class.checked]="s.seleccionado"
-          [class.cat-demandante]="s.categoria === 'DEMANDANTE'"
-          [class.cat-demandado]="s.categoria === 'DEMANDADO'"
-          [class.cat-agraviado]="s.categoria === 'AGRAVIADO'"
-          [class.cat-domicilio]="s.categoria === 'DOMICILIO'"
-          [class.cat-otro]="s.categoria === 'OTRO'"
-        >
-          <div class="sujeto-card-checkbox">
-            <label class="custom-checkbox">
-              <input type="checkbox" [(ngModel)]="s.seleccionado" />
-              <span class="checkmark"></span>
-            </label>
+      <!-- GRUPO 1: SUJETOS PROCESALES Y VARIANTES DE NOMBRES -->
+      <div class="grupo-seccion" *ngIf="sujetosPrincipales.length > 0">
+        <div class="grupo-header">
+          <span class="grupo-title">
+            <i class="fa-solid fa-users"></i> Sujetos Procesales (y variantes de nombres)
+          </span>
+          <div class="grupo-actions">
+            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('sujetos', true)">Marcar</button>
+            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('sujetos', false)">Desmarcar</button>
           </div>
+        </div>
 
-          <div class="sujeto-card-body">
-            <div class="sujeto-meta-row">
-              <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
-                {{ s.categoria }}
-              </span>
-              <span class="sujeto-status">
-                {{ s.seleccionado ? 'Se censurará' : 'Conservar (No censurar)' }}
-              </span>
-            </div>
-            <input
-              type="text"
-              [(ngModel)]="s.valor"
-              class="sujeto-input-text"
-              placeholder="Texto o nombre a censurar"
-              title="Puedes editar el texto si requieres afinar la coincidencia"
-            />
-          </div>
-
-          <button
-            type="button"
-            class="btn-remove-sujeto"
-            (click)="eliminarSujeto(i)"
-            title="Quitar este elemento de la lista"
+        <div class="sujetos-list">
+          <div
+            *ngFor="let s of sujetosPrincipales"
+            class="sujeto-card"
+            [class.checked]="s.seleccionado"
+            [class.cat-demandante]="s.categoria === 'DEMANDANTE'"
+            [class.cat-demandado]="s.categoria === 'DEMANDADO'"
+            [class.cat-agraviado]="s.categoria === 'AGRAVIADO'"
+            [class.cat-otro]="s.categoria === 'OTRO'"
           >
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
+            <div class="sujeto-card-checkbox">
+              <label class="custom-checkbox">
+                <input type="checkbox" [(ngModel)]="s.seleccionado" />
+                <span class="checkmark"></span>
+              </label>
+            </div>
+
+            <div class="sujeto-card-body">
+              <div class="sujeto-meta-row">
+                <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
+                  {{ s.categoria }}
+                </span>
+                <span class="sujeto-status">
+                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                </span>
+              </div>
+              <input
+                type="text"
+                [(ngModel)]="s.valor"
+                class="sujeto-input-text"
+                placeholder="Nombre a censurar"
+              />
+
+              <!-- Muestra variantes de orden de nombres detectadas/generadas -->
+              <div class="variantes-box" *ngIf="s.variantes && s.variantes.length > 1">
+                <span class="variantes-label">
+                  <i class="fa-solid fa-arrows-split-up-and-left"></i> Variantes incluidas:
+                </span>
+                <span class="variante-chip" *ngFor="let v of s.variantes">
+                  {{ v }}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn-remove-sujeto"
+              (click)="eliminarSujeto(s.id)"
+              title="Quitar de la lista"
+            >
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRUPO 2: DATOS PERSONALES DE LAS PARTES (DOMICILIO, TELÉFONO, DNI, EDAD, ETC.) -->
+      <div class="grupo-seccion" *ngIf="datosPersonales.length > 0">
+        <div class="grupo-header personal-header">
+          <span class="grupo-title">
+            <i class="fa-solid fa-address-card"></i> Datos Personales de las Partes (III)
+          </span>
+          <div class="grupo-actions">
+            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', true)">Marcar todos</button>
+            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', false)">Desmarcar</button>
+          </div>
+        </div>
+
+        <div class="sujetos-list">
+          <div
+            *ngFor="let s of datosPersonales"
+            class="sujeto-card card-personal"
+            [class.checked]="s.seleccionado"
+          >
+            <div class="sujeto-card-checkbox">
+              <label class="custom-checkbox">
+                <input type="checkbox" [(ngModel)]="s.seleccionado" />
+                <span class="checkmark"></span>
+              </label>
+            </div>
+
+            <div class="sujeto-card-body">
+              <div class="sujeto-meta-row">
+                <span class="badge-campo-personal">
+                  <i class="fa-solid fa-tag"></i> {{ s.campo || s.etiqueta || s.categoria }}
+                </span>
+                <span class="sujeto-status">
+                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                </span>
+              </div>
+              <input
+                type="text"
+                [(ngModel)]="s.valor"
+                class="sujeto-input-text"
+                placeholder="Dato personal a censurar"
+              />
+            </div>
+
+            <button
+              type="button"
+              class="btn-remove-sujeto"
+              (click)="eliminarSujeto(s.id)"
+              title="Quitar este dato"
+            >
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -156,13 +230,15 @@
             <option value="DEMANDADO">DEMANDADO</option>
             <option value="AGRAVIADO">AGRAVIADO</option>
             <option value="DOMICILIO">DOMICILIO</option>
-            <option value="OTRO">OTRO DATO</option>
+            <option value="TELEFONO">TELÉFONO</option>
+            <option value="DNI">DNI</option>
+            <option value="DATO_PERSONAL">OTRO DATO PERSONAL</option>
           </select>
           <input
             type="text"
             [(ngModel)]="nuevoTextoManual"
             (keyup.enter)="agregarSujetoManual()"
-            placeholder="Ej: Nombre, DNI, dirección..."
+            placeholder="Ej: Nombre, DNI, dirección, teléfono..."
             class="manual-input"
           />
           <button
@@ -180,7 +256,7 @@
       <div class="options-box">
         <label class="option-check-label">
           <input type="checkbox" [(ngModel)]="censurarEtiquetas" />
-          <span>Censurar también las etiquetas de texto (ej: <code>DEMANDANTE:</code>, <code>DEMANDADO:</code>, etc.)</span>
+          <span>Censurar también etiquetas en el texto (ej: <code>DEMANDANTE:</code>, <code>Domicilio:</code>, etc.)</span>
         </label>
       </div>
 
@@ -283,7 +359,6 @@
 
     <!-- Contenido del Visor -->
     <div class="visor-canvas-container">
-      <!-- Placeholder cuando aún no se ha cargado archivo -->
       <div *ngIf="!archivoCargado" class="visor-empty-state">
         <div class="empty-icon-box">
           <i class="fa-solid fa-file-pdf"></i>
@@ -293,11 +368,11 @@
         <div class="feature-bullets">
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Detección automática de Sujetos Procesales</span>
+            <span>Detección automática de Sujetos Procesales y variantes</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Aprobación interactiva antes de censurar</span>
+            <span>Eliminación de Datos Personales (Domicilio, Teléfono, DNI, etc.)</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
