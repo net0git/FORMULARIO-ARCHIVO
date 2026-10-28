@@ -52,6 +52,25 @@
         </ul>
       </li>
 
+      <li class="menu-item" [class.active]="vistaActiva === 'censurar-pdf'" [class.open]="menuHerramientasAbierto">
+        <a href="javascript:void(0)" (click)="menuHerramientasAbierto = !menuHerramientasAbierto">
+          <i class="fa-solid fa-wrench"></i>
+          <span *ngIf="!sidebarColapsado">Herramientas</span>
+          <i
+            class="fa-solid fa-angle-down arrow"
+            *ngIf="!sidebarColapsado"
+            [class.rotated]="!menuHerramientasAbierto"
+          ></i>
+        </a>
+        <ul class="submenu" *ngIf="menuHerramientasAbierto && !sidebarColapsado">
+          <li [class.active]="vistaActiva === 'censurar-pdf'">
+            <a href="javascript:void(0)" (click)="vistaActiva = 'censurar-pdf'">
+              <i class="fa-regular fa-circle"></i> Censurar PDF
+            </a>
+          </li>
+        </ul>
+      </li>
+
       <li class="menu-item" [class.active]="vistaActiva === 'personal'" [class.open]="menuConfiguracionAbierto">
         <a href="javascript:void(0)" (click)="menuConfiguracionAbierto = !menuConfiguracionAbierto">
           <i class="fa-solid fa-gears"></i>
@@ -488,6 +507,26 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </section>
+      </ng-container>
+
+      <!-- ================================================================= -->
+      <!-- MÓDULO HERRAMIENTAS: CENSURAR PDF                                 -->
+      <!-- ================================================================= -->
+      <ng-container *ngIf="vistaActiva === 'censurar-pdf'">
+        <section class="admin-card fade-in">
+          <div class="admin-card-header">
+            Herramientas - Censurar PDF
+          </div>
+          <div class="admin-card-body">
+            <div style="padding: 40px 20px; text-align: center; color: #475569;">
+              <i class="fa-solid fa-file-shield" style="font-size: 54px; color: #0284c7; margin-bottom: 16px; display: inline-block;"></i>
+              <h3 style="margin-bottom: 8px; font-weight: 600; color: #1e293b;">Módulo Censurar PDF</h3>
+              <p style="font-size: 14px; max-width: 520px; margin: 0 auto; color: #64748b;">
+                Herramienta para censurar, proteger y anonimizar datos confidenciales en documentos PDF.
+              </p>
+            </div>
           </div>
         </section>
       </ng-container>

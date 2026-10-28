@@ -35,8 +35,9 @@ export class AtencionSolicitudesComponent implements OnInit {
   usuarioActual: UsuarioSistema | null = null;
   sidebarColapsado = false;
   menuArchivoAbierto = true;
+  menuHerramientasAbierto = true;
   menuConfiguracionAbierto = true;
-  vistaActiva: 'solicitudes' | 'personal' = 'solicitudes';
+  vistaActiva: 'solicitudes' | 'personal' | 'censurar-pdf' = 'solicitudes';
   cortes = CORTES_SUPERIORES;
 
   // Lista completa y filtrada de Solicitudes
