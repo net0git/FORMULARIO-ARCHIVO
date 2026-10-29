@@ -123,7 +123,7 @@
         <i class="fa-solid fa-circle-info"></i>
         <div>
           <strong>No se detectaron sujetos automáticamente en la portada ni en datos personales.</strong>
-          <p>Puedes dibujar recuadros directamente sobre el visor derecho o agregar términos manualmente.</p>
+          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario inferior.</p>
         </div>
       </div>
 
@@ -158,24 +158,36 @@
 
             <div class="sujeto-card-body">
               <div class="sujeto-meta-row">
-                <span class="categoria-badge" [attr.data-cat]="s.categoria">{{ s.categoria }}</span>
-                <span class="campo-nombre" *ngIf="s.campo">{{ s.campo }}</span>
+                <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
+                  {{ s.categoria }}
+                </span>
+                <span class="sujeto-status">
+                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                </span>
               </div>
-              <div class="sujeto-valor-principal">{{ s.valor }}</div>
+              <input
+                type="text"
+                [(ngModel)]="s.valor"
+                class="sujeto-input-text"
+                placeholder="Nombre a censurar"
+              />
 
+              <!-- Muestra variantes de orden de nombres detectadas/generadas -->
               <div class="variantes-box" *ngIf="s.variantes && s.variantes.length > 1">
-                <span class="variantes-label"><i class="fa-solid fa-arrows-split-up-and-left"></i> Variantes a censurar:</span>
-                <div class="variantes-chips">
-                  <span *ngFor="let v of s.variantes" class="chip-variante">{{ v }}</span>
-                </div>
+                <span class="variantes-label">
+                  <i class="fa-solid fa-arrows-split-up-and-left"></i> Variantes incluidas:
+                </span>
+                <span class="variante-chip" *ngFor="let v of s.variantes">
+                  {{ v }}
+                </span>
               </div>
             </div>
 
             <button
               type="button"
-              class="btn-eliminar-sujeto"
+              class="btn-remove-sujeto"
               (click)="eliminarSujeto(s.id)"
-              title="Eliminar de la lista de censura"
+              title="Quitar de la lista"
             >
               <i class="fa-solid fa-trash-can"></i>
             </button>
@@ -183,14 +195,14 @@
         </div>
       </div>
 
-      <!-- GRUPO 2: DATOS PERSONALES DE LAS PARTES -->
+      <!-- GRUPO 2: DATOS PERSONALES DE LAS PARTES (DOMICILIO, TELÉFONO, DNI, EDAD, ETC.) -->
       <div class="grupo-seccion" *ngIf="datosPersonales.length > 0">
-        <div class="grupo-header">
+        <div class="grupo-header personal-header">
           <span class="grupo-title">
-            <i class="fa-solid fa-address-card"></i> Datos Personales de las Partes
+            <i class="fa-solid fa-address-card"></i> Datos Personales de las Partes (III)
           </span>
           <div class="grupo-actions">
-            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', true)">Marcar</button>
+            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', true)">Marcar todos</button>
             <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', false)">Desmarcar</button>
           </div>
         </div>
@@ -210,17 +222,26 @@
 
             <div class="sujeto-card-body">
               <div class="sujeto-meta-row">
-                <span class="categoria-badge badge-personal">{{ s.categoria }}</span>
-                <span class="campo-nombre" *ngIf="s.campo">{{ s.campo }}</span>
+                <span class="badge-campo-personal">
+                  <i class="fa-solid fa-tag"></i> {{ s.campo || s.etiqueta || s.categoria }}
+                </span>
+                <span class="sujeto-status">
+                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                </span>
               </div>
-              <div class="sujeto-valor-principal">{{ s.valor }}</div>
+              <input
+                type="text"
+                [(ngModel)]="s.valor"
+                class="sujeto-input-text"
+                placeholder="Dato personal a censurar"
+              />
             </div>
 
             <button
               type="button"
-              class="btn-eliminar-sujeto"
+              class="btn-remove-sujeto"
               (click)="eliminarSujeto(s.id)"
-              title="Eliminar de la lista de censura"
+              title="Quitar este dato"
             >
               <i class="fa-solid fa-trash-can"></i>
             </button>
@@ -228,37 +249,7 @@
         </div>
       </div>
 
-      <!-- GRUPO 3: RECUADROS MANUALES DIBUJADOS CON EL CURSOR -->
-      <div class="grupo-seccion seccion-manual" *ngIf="recuadrosManuales.length > 0">
-        <div class="grupo-header">
-          <span class="grupo-title">
-            <i class="fa-solid fa-pen-ruler"></i> Áreas Manuales Dibujadas ({{ recuadrosManuales.length }})
-          </span>
-          <div class="grupo-actions">
-            <button type="button" class="btn-mini-link btn-danger-link" (click)="limpiarTodosLosRecuadrosManuales()">Limpiar todos</button>
-          </div>
-        </div>
-
-        <div class="recuadros-chips-list">
-          <div *ngFor="let r of recuadrosManuales; let idx = index" class="recuadro-item-chip">
-            <span class="recuadro-chip-text" (click)="irAPaginaManual(r.pagina)">
-              <i class="fa-regular fa-square-full"></i>
-              <strong>{{ r.descripcion }}</strong>
-              <small>(Pág. {{ r.pagina }})</small>
-            </span>
-            <button
-              type="button"
-              class="btn-del-chip"
-              (click)="eliminarRecuadroManual(r.id, $event)"
-              title="Eliminar recuadro"
-            >
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Formulario para agregar término manual -->
+      <!-- FORMULARIO PARA AGREGAR DATO ADICIONAL MANUAL (COLOCADO ENCIMA DE ÁREAS MANUALES DIBUJADAS) -->
       <div class="add-manual-box">
         <label><i class="fa-solid fa-plus"></i> Agregar dato adicional para censurar:</label>
         <div class="add-manual-row">
@@ -286,6 +277,36 @@
           >
             Agregar
           </button>
+        </div>
+      </div>
+
+      <!-- ÁREAS MANUALES DIBUJADAS (COLOCADO DEBAJO DE AGREGAR DATO ADICIONAL) -->
+      <div class="grupo-seccion seccion-manual" *ngIf="recuadrosManuales.length > 0">
+        <div class="grupo-header">
+          <span class="grupo-title">
+            <i class="fa-solid fa-pen-ruler"></i> Áreas manuales dibujadas ({{ recuadrosManuales.length }})
+          </span>
+          <div class="grupo-actions">
+            <button type="button" class="btn-mini-link btn-danger-link" (click)="limpiarTodosLosRecuadrosManuales()">Limpiar todos</button>
+          </div>
+        </div>
+
+        <div class="recuadros-chips-list">
+          <div *ngFor="let r of recuadrosManuales; let idx = index" class="recuadro-item-chip">
+            <span class="recuadro-chip-text" (click)="irAPaginaManual(r.pagina)">
+              <i class="fa-regular fa-square-full"></i>
+              <strong>{{ r.descripcion }}</strong>
+              <small>(Pág. {{ r.pagina }})</small>
+            </span>
+            <button
+              type="button"
+              class="btn-del-chip"
+              (click)="eliminarRecuadroManual(r.id, $event)"
+              title="Eliminar recuadro"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
         </div>
       </div>
 

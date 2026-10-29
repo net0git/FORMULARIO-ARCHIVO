@@ -549,6 +549,21 @@
   color: #475569;
 }
 
+.badge-dni {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-telefono {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.badge-dato_personal {
+  background: #f1f5f9;
+  color: #334155;
+}
+
 .sujeto-status {
   font-size: 10.5px;
   color: #64748b;
