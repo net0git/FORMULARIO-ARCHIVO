@@ -24,6 +24,23 @@ export interface SujetoCensura {
   esDatoPersonal?: boolean;
 }
 
+
+export interface RecuadroManualCensura {
+  id: string;
+  pagina: number; // 1-indexado (número de página del PDF)
+  x: number;      // Puntos PDF (origen inferior izquierdo)
+  y: number;      // Puntos PDF
+  width: number;  // Ancho en puntos PDF
+  height: number; // Alto en puntos PDF
+  pantalla?: {
+    xPct: number; // Posición porcentual sobre el ancho de la página (0 a 100)
+    yPct: number; // Posición porcentual sobre el alto de la página (0 a 100)
+    wPct: number;
+    hPct: number;
+  };
+  descripcion?: string;
+}
+
 export interface ResultadoAnalisisPdf {
   numPaginas: number;
   nombreArchivo: string;
@@ -422,9 +439,10 @@ export class PdfCensuraService {
       censurarTodasLasOcurrencias?: boolean;
       censurarEtiquetas?: boolean;
       colorHex?: string;
+      recuadrosManuales?: RecuadroManualCensura[];
     } = {}
   ): Promise<{ pdfBytes: Uint8Array; totalCoincidencias: number }> {
-    const { censurarEtiquetas = false } = opciones;
+    const { censurarEtiquetas = false, recuadrosManuales = [] } = opciones;
 
     const terminosValidos = sujetosACensurar
       .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
@@ -452,7 +470,7 @@ export class PdfCensuraService {
         };
       });
 
-    if (terminosValidos.length === 0) {
+    if (terminosValidos.length === 0 && recuadrosManuales.length === 0) {
       return { pdfBytes: new Uint8Array(pdfOriginalBytes.slice(0)), totalCoincidencias: 0 };
     }
 
@@ -599,6 +617,22 @@ export class PdfCensuraService {
               break;
             }
           }
+        }
+      }
+
+      // 3. Aplicar recuadros manuales dibujados por el usuario para esta página
+      if (recuadrosManuales && recuadrosManuales.length > 0) {
+        const recuadrosPagina = recuadrosManuales.filter(r => r.pagina === pageNum);
+        for (const r of recuadrosPagina) {
+          totalCoincidencias++;
+          pagePdfLib.drawRectangle({
+            x: Math.max(0, r.x),
+            y: Math.max(0, r.y),
+            width: Math.min(pageWidth - r.x, r.width),
+            height: Math.min(pageHeight - r.y, r.height),
+            color: rgb(0, 0, 0),
+            opacity: 1.0
+          });
         }
       }
     }
