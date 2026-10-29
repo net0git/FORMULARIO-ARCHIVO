@@ -43,6 +43,24 @@ export interface RecuadroManualCensura {
   descripcion?: string;
 }
 
+export interface CajaCensuraDetectada {
+  id: string;
+  terminoId?: string;
+  sujetoPadreId?: string;
+  tipo: 'sujeto' | 'dato_personal';
+  categoria?: string;
+  etiqueta?: string;
+  valorTexto: string;
+  pdfX: number;
+  pdfY: number;
+  pdfW: number;
+  pdfH: number;
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+}
+
 export interface ResultadoAnalisisPdf {
   numPaginas: number;
   nombreArchivo: string;
@@ -455,8 +473,8 @@ export class PdfCensuraService {
    * Determina si dos cadenas corresponden al mismo nombre independientemente del orden
    */
   sonMismoNombre(nombre1: string, nombre2: string): boolean {
-    const tokens1 = this.normalizarTexto(nombre1).split(' ').filter(w => w.length > 1).sort().join(' ');
-    const tokens2 = this.normalizarTexto(nombre2).split(' ').filter(w => w.length > 1).sort().join(' ');
+    const tokens1 = this.normalizarTexto(nombre1).split(' ').filter((w: string) => w.length > 1).sort().join(' ');
+    const tokens2 = this.normalizarTexto(nombre2).split(' ').filter((w: string) => w.length > 1).sort().join(' ');
     return tokens1.length > 3 && tokens1 === tokens2;
   }
 
@@ -493,8 +511,214 @@ export class PdfCensuraService {
   }
 
   /**
+   * Identifica y calcula las cajas de censura de una página agrupando por líneas visuales
+   * y añadiendo un margen de seguridad adaptativo para cubrir completamente nombres compuestos,
+   * caracteres anchos y terminaciones sin dejar letras expuestas ni desfasadas.
+   */
+  calcularCajasPagina(
+    textContent: any,
+    sujetos: SujetoCensura[],
+    pageWidth: number,
+    pageHeight: number,
+    pageNum: number = 1,
+    opciones: { censurarEtiquetas?: boolean } = {}
+  ): CajaCensuraDetectada[] {
+    const { censurarEtiquetas = false } = opciones;
+    const cajas: CajaCensuraDetectada[] = [];
+
+    const rawItems = ((textContent && textContent.items) as any[] || []).filter(it => it && it.str && it.str.trim());
+    if (rawItems.length === 0) return cajas;
+
+    const items = rawItems.map(it => ({
+      str: it.str,
+      strNorm: this.normalizarTexto(it.str),
+      tx: it.transform ? it.transform[4] : 0,
+      ty: it.transform ? it.transform[5] : 0,
+      fontH: it.transform ? (Math.hypot(it.transform[0], it.transform[1]) || it.height || 12) : 12,
+      fontW: it.width || (it.str.length * 8)
+    }));
+
+    // Agrupar items por línea visual (mismo Y con tolerancia de 4pt)
+    const itemsOrdenados = [...items].sort((a, b) => {
+      if (Math.abs(a.ty - b.ty) > 4) return b.ty - a.ty;
+      return a.tx - b.tx;
+    });
+
+    const lineasVisuales: any[][] = [];
+    let lineaActual: any[] = [];
+    let yActual: number | null = null;
+    for (const it of itemsOrdenados) {
+      if (yActual === null || Math.abs(it.ty - yActual) > 4) {
+        if (lineaActual.length > 0) {
+          lineasVisuales.push(lineaActual.sort((a, b) => a.tx - b.tx));
+        }
+        lineaActual = [it];
+        yActual = it.ty;
+      } else {
+        lineaActual.push(it);
+      }
+    }
+    if (lineaActual.length > 0) {
+      lineasVisuales.push(lineaActual.sort((a, b) => a.tx - b.tx));
+    }
+
+    // Aplanar sujetos principales y datos personales seleccionados
+    const todosSujetos: SujetoCensura[] = [];
+    for (const s of sujetos) {
+      if (s.seleccionado && s.valor && s.valor.trim().length > 1) {
+        todosSujetos.push(s);
+      }
+      if (s.datosPersonales && s.datosPersonales.length > 0) {
+        for (const dp of s.datosPersonales) {
+          if (dp.seleccionado && dp.valor && dp.valor.trim().length > 1) {
+            todosSujetos.push(dp);
+          }
+        }
+      }
+    }
+
+    for (const s of todosSujetos) {
+      const sNorm = this.normalizarTexto(s.valor);
+      if (!sNorm || sNorm.length < 2) continue;
+
+      const palabras = sNorm.split(' ').filter((w: string) => w.length > 1);
+      const combinaciones = this.generarCombinacionesPalabras(s.valor);
+
+      for (const linea of lineasVisuales) {
+        const textoLineaNorm = linea.map(it => it.strNorm).join(' ');
+
+        let coincide = false;
+        if (!s.esDatoPersonal) {
+          // Sujeto procesal: coincidencia por combinación exacta, por todas las palabras clave o por texto exacto
+          const coincideCombinacion = combinaciones.some(c => this.contieneTerminoExacto(textoLineaNorm, c));
+          const coincidenTodas = palabras.length >= 2 && palabras.every((p: string) => this.contieneTerminoExacto(textoLineaNorm, p));
+          const coincideDirecto = this.contieneTerminoExacto(textoLineaNorm, s.valor);
+          coincide = coincideCombinacion || coincidenTodas || coincideDirecto;
+        } else {
+          // Dato personal: coincidencia exacta de término, subcadena de dígitos/código o todas las palabras
+          coincide =
+            this.contieneTerminoExacto(textoLineaNorm, s.valor) ||
+            (sNorm.length >= 4 && textoLineaNorm.includes(sNorm)) ||
+            (palabras.length >= 2 && palabras.every((p: string) => this.contieneTerminoExacto(textoLineaNorm, p)));
+        }
+
+        if (coincide) {
+          let itemsMatch: any[] = [];
+          if (!s.esDatoPersonal) {
+            itemsMatch = linea.filter(it =>
+              palabras.some((p: string) => it.strNorm === p || this.contieneTerminoExacto(it.strNorm, p)) ||
+              this.contieneTerminoExacto(it.strNorm, s.valor)
+            );
+          } else {
+            itemsMatch = linea.filter(it =>
+              this.contieneTerminoExacto(it.strNorm, s.valor) ||
+              (sNorm.length >= 4 && it.strNorm.includes(sNorm)) ||
+              palabras.some((p: string) => it.strNorm === p || this.contieneTerminoExacto(it.strNorm, p))
+            );
+          }
+
+          if (itemsMatch.length > 0) {
+            const minX = Math.min(...itemsMatch.map(it => it.tx));
+            const lastItem = itemsMatch[itemsMatch.length - 1];
+
+            // Margen adaptativo: las fuentes en PDFs escaneados u OCR suelen ser más anchas
+            // que el cálculo base de PDF.js. Añadimos margen extra para garantizar cobertura 100%.
+            const extraRight = Math.max(14, lastItem.fontW * 0.25 + 6);
+            const maxX = Math.max(...itemsMatch.map(it => it.tx + it.fontW)) + extraRight;
+            const minY = Math.min(...itemsMatch.map(it => it.ty));
+            const maxY = Math.max(...itemsMatch.map(it => it.ty + it.fontH));
+
+            const paddingX = 4;
+            const paddingY = 2.5;
+
+            const pdfX = Math.max(0, minX - paddingX);
+            const pdfY = Math.max(0, minY - paddingY);
+            const pdfW = Math.min(pageWidth - pdfX, (maxX - minX) + paddingX * 2);
+            const pdfH = Math.min(pageHeight - pdfY, (maxY - minY) + paddingY * 2);
+
+            const xPct = Math.max(0, (pdfX / pageWidth) * 100);
+            const yPct = Math.max(0, ((pageHeight - (pdfY + pdfH)) / pageHeight) * 100);
+            const wPct = Math.min(100, (pdfW / pageWidth) * 100);
+            const hPct = Math.min(100, (pdfH / pageHeight) * 100);
+
+            const cajaId = `vis_p${pageNum}_${s.esDatoPersonal ? 'dp' : 'suj'}_${s.id}_${Math.round(xPct)}_${Math.round(yPct)}`;
+
+            cajas.push({
+              id: cajaId,
+              terminoId: s.id,
+              sujetoPadreId: s.sujetoPadreId,
+              tipo: s.esDatoPersonal ? 'dato_personal' : 'sujeto',
+              categoria: s.categoria,
+              etiqueta: s.etiqueta || s.categoria,
+              valorTexto: s.valor,
+              pdfX,
+              pdfY,
+              pdfW,
+              pdfH,
+              xPct,
+              yPct,
+              wPct,
+              hPct
+            });
+          }
+        }
+      }
+
+      // Si también se solicitó censurar la etiqueta asociada al término (ej: "DEMANDADO:", "AGRAVIADO:")
+      const debeCensurarEtiqueta = s.censurarEtiqueta || censurarEtiquetas;
+      if (debeCensurarEtiqueta && s.etiqueta) {
+        const etiqNorm = this.normalizarTexto(s.etiqueta);
+        if (etiqNorm.length >= 3) {
+          for (const linea of lineasVisuales) {
+            const itemsEtiq = linea.filter(it => it.strNorm.includes(etiqNorm) || this.contieneTerminoExacto(it.strNorm, s.etiqueta!));
+            if (itemsEtiq.length > 0) {
+              const minX = Math.min(...itemsEtiq.map(it => it.tx));
+              const maxX = Math.max(...itemsEtiq.map(it => it.tx + it.fontW)) + 6;
+              const minY = Math.min(...itemsEtiq.map(it => it.ty));
+              const maxY = Math.max(...itemsEtiq.map(it => it.ty + it.fontH));
+
+              const paddingX = 3;
+              const paddingY = 2;
+
+              const pdfX = Math.max(0, minX - paddingX);
+              const pdfY = Math.max(0, minY - paddingY);
+              const pdfW = Math.min(pageWidth - pdfX, (maxX - minX) + paddingX * 2);
+              const pdfH = Math.min(pageHeight - pdfY, (maxY - minY) + paddingY * 2);
+
+              const xPct = Math.max(0, (pdfX / pageWidth) * 100);
+              const yPct = Math.max(0, ((pageHeight - (pdfY + pdfH)) / pageHeight) * 100);
+              const wPct = Math.min(100, (pdfW / pageWidth) * 100);
+              const hPct = Math.min(100, (pdfH / pageHeight) * 100);
+
+              const cajaId = `etiq_p${pageNum}_${s.id}_${Math.round(xPct)}_${Math.round(yPct)}`;
+              cajas.push({
+                id: cajaId,
+                terminoId: s.id,
+                tipo: 'sujeto',
+                categoria: s.categoria,
+                etiqueta: s.etiqueta,
+                valorTexto: s.etiqueta,
+                pdfX,
+                pdfY,
+                pdfW,
+                pdfH,
+                xPct,
+                yPct,
+                wPct,
+                hPct
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return cajas;
+  }
+
+  /**
    * Aplica la censura con rectángulos negros sobre el PDF original
-   * Soporta variantes de nombres, datos personales de las partes y permutaciones en todo el documento.
+   * Utiliza la misma detección precisa y márgenes que el visor visual.
    */
   async censurarPdf(
     pdfOriginalBytes: ArrayBuffer,
@@ -507,50 +731,12 @@ export class PdfCensuraService {
       cajasExcluidas?: { pagina: number; xPct: number; yPct: number; wPct: number; hPct: number }[];
     } = {}
   ): Promise<{ pdfBytes: Uint8Array; totalCoincidencias: number }> {
-        const { censurarEtiquetas = false, recuadrosManuales = [], cajasExcluidas = [] } = opciones;
+    const { censurarEtiquetas = false, recuadrosManuales = [], cajasExcluidas = [] } = opciones;
 
-    // Aplanar los sujetos principales y sus datos personales anidados
-    const todosLosSujetosAplanados: SujetoCensura[] = [];
-    for (const s of sujetosACensurar) {
-      if (s.seleccionado && s.valor && s.valor.trim().length > 1) {
-        todosLosSujetosAplanados.push(s);
-      }
-      if (s.datosPersonales && s.datosPersonales.length > 0) {
-        for (const dp of s.datosPersonales) {
-          if (dp.seleccionado && dp.valor && dp.valor.trim().length > 1) {
-            todosLosSujetosAplanados.push(dp);
-          }
-        }
-      }
-    }
-
-    const terminosValidos = todosLosSujetosAplanados
-      .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
-      .map(s => {
-        const todasLasVariantes = new Set<string>();
-        todasLasVariantes.add(s.valor.trim());
-        if (s.variantes && s.variantes.length > 0) {
-          s.variantes.forEach(v => todasLasVariantes.add(v.trim()));
-        }
-        // Generar también variantes sobre la marcha
-        const varsCalculadas = this.generarCombinacionesPalabras(s.valor);
-        varsCalculadas.forEach(v => todasLasVariantes.add(v));
-
-        const palabrasClave = s.valor
-          .split(/\s+/)
-          .map(w => this.normalizarTexto(w))
-          .filter(w => w.length > 1);
-
-        return {
-          valorOriginal: s.valor.trim(),
-          variantes: Array.from(todasLasVariantes),
-          palabrasClave,
-          etiqueta: s.etiqueta,
-          censurarEtiqueta: s.censurarEtiqueta || censurarEtiquetas
-        };
-      });
-
-    if (terminosValidos.length === 0 && recuadrosManuales.length === 0) {
+    const haySujetos = sujetosACensurar.some(
+      s => s.seleccionado || (s.datosPersonales && s.datosPersonales.some(d => d.seleccionado))
+    );
+    if (!haySujetos && recuadrosManuales.length === 0) {
       return { pdfBytes: new Uint8Array(pdfOriginalBytes.slice(0)), totalCoincidencias: 0 };
     }
 
@@ -581,149 +767,36 @@ export class PdfCensuraService {
           if (ex.pagina !== pNum) return false;
           const solapeX = Math.max(0, Math.min(xPct + wPct, ex.xPct + ex.wPct) - Math.max(xPct, ex.xPct));
           const solapeY = Math.max(0, Math.min(yPct + hPct, ex.yPct + ex.hPct) - Math.max(yPct, ex.yPct));
-          return solapeX > 0.5 * Math.min(wPct, ex.wPct) && solapeY > 0.5 * Math.min(hPct, ex.hPct);
+          return solapeX > 0.4 * Math.min(wPct, ex.wPct) && solapeY > 0.4 * Math.min(hPct, ex.hPct);
         });
       };
 
+      // 1. Detección automática por líneas visuales idéntica a la del visor interactivo
+      const cajasDetectadas = this.calcularCajasPagina(
+        textContent,
+        sujetosACensurar,
+        pageWidth,
+        pageHeight,
+        pageNum,
+        { censurarEtiquetas }
+      );
 
-      const items: { str: string; tx: number; ty: number; w: number; h: number }[] = [];
-
-      for (const rawItem of textContent.items as any[]) {
-        if (!rawItem.str || !rawItem.transform) continue;
-        const tx = rawItem.transform[4];
-        const ty = rawItem.transform[5];
-        const w = rawItem.width || 0;
-        const h = rawItem.height || Math.abs(rawItem.transform[0]) || 12;
-
-        items.push({
-          str: rawItem.str,
-          tx,
-          ty,
-          w,
-          h
+      for (const caja of cajasDetectadas) {
+        if (estaExcluido(pageNum, caja.pdfX, caja.pdfY, caja.pdfW, caja.pdfH)) {
+          continue;
+        }
+        totalCoincidencias++;
+        pagePdfLib.drawRectangle({
+          x: Math.max(0, caja.pdfX),
+          y: Math.max(0, caja.pdfY),
+          width: Math.min(pageWidth - caja.pdfX, caja.pdfW),
+          height: Math.min(pageHeight - caja.pdfY, caja.pdfH),
+          color: rgb(0, 0, 0),
+          opacity: 1.0
         });
       }
 
-      // 1. Búsqueda directa y por variantes en cada item individual
-      for (const t of terminosValidos) {
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          const textoItemNorm = this.normalizarTexto(item.str);
-
-          let coincide = false;
-
-          // Verificar contra todas las variantes conocidas
-          for (const varTxt of t.variantes) {
-            const varNorm = this.normalizarTexto(varTxt);
-            if (this.contieneTerminoExacto(textoItemNorm, varTxt)) {
-              coincide = true;
-              break;
-            }
-          }
-
-          // Si contiene todas las palabras clave del nombre juntas en el mismo item
-          if (!coincide && t.palabrasClave.length >= 2) {
-            const todasEnItem = t.palabrasClave.every(p => this.contieneTerminoExacto(textoItemNorm, p));
-            if (todasEnItem) {
-              coincide = true;
-            }
-          }
-
-          if (coincide) {
-            const padding = 3;
-            const rx = Math.max(0, item.tx - padding);
-            const ry = Math.max(0, item.ty - padding);
-            const rw = Math.min(pageWidth - item.tx, item.w + padding * 2);
-            const rh = item.h + padding * 2;
-            if (estaExcluido(pageNum, rx, ry, rw, rh)) {
-              continue;
-            }
-            totalCoincidencias++;
-            pagePdfLib.drawRectangle({
-              x: Math.max(0, item.tx - padding),
-              y: Math.max(0, item.ty - padding),
-              width: Math.min(pageWidth - item.tx, item.w + padding * 2),
-              height: item.h + padding * 2,
-              color: rgb(0, 0, 0),
-              opacity: 1.0
-            });
-          }
-
-          // Si también se debe censurar la etiqueta correspondiente (ej: DEMANDANTE:, Domicilio:)
-          if (t.censurarEtiqueta && t.etiqueta) {
-            const etiqNorm = this.normalizarTexto(t.etiqueta);
-            if (textoItemNorm.includes(etiqNorm)) {
-              totalCoincidencias++;
-              const padding = 2;
-              pagePdfLib.drawRectangle({
-                x: Math.max(0, item.tx - padding),
-                y: Math.max(0, item.ty - padding),
-                width: Math.min(pageWidth - item.tx, item.w + padding * 2),
-                height: item.h + padding * 2,
-                color: rgb(0, 0, 0),
-                opacity: 1.0
-              });
-            }
-          }
-        }
-      }
-
-      // 2. Búsqueda por ventana deslizante de items contiguos (para frases divididas o nombres con orden invertido)
-      for (const t of terminosValidos) {
-        for (let i = 0; i < items.length; i++) {
-          let accumNorm = '';
-          let minX = items[i].tx;
-          let maxX = items[i].tx + items[i].w;
-          let minY = items[i].ty;
-          let maxH = items[i].h;
-
-          // Ventana de hasta 8 items contiguos
-          for (let j = i; j < Math.min(items.length, i + 8); j++) {
-            accumNorm += ' ' + this.normalizarTexto(items[j].str);
-            accumNorm = accumNorm.trim();
-            minX = Math.min(minX, items[j].tx);
-            maxX = Math.max(maxX, items[j].tx + items[j].w);
-            minY = Math.min(minY, items[j].ty);
-            maxH = Math.max(maxH, items[j].h);
-
-            let coincideVentana = false;
-
-            // Coincidencia con alguna variante completa
-            for (const varTxt of t.variantes) {
-              const varNorm = this.normalizarTexto(varTxt);
-              if (this.contieneTerminoExacto(accumNorm, varTxt)) {
-                coincideVentana = true;
-                break;
-              }
-            }
-
-            // O coincidencia si todas las palabras clave del nombre están presentes en la ventana contigua
-            if (!coincideVentana && t.palabrasClave.length >= 2) {
-              const todasPresentes = t.palabrasClave.every(p => accumNorm.includes(p));
-              if (todasPresentes) {
-                coincideVentana = true;
-              }
-            }
-
-            if (coincideVentana) {
-              totalCoincidencias++;
-              const padding = 3;
-              pagePdfLib.drawRectangle({
-                x: Math.max(0, minX - padding),
-                y: Math.max(0, minY - padding),
-                width: Math.min(pageWidth - minX, (maxX - minX) + padding * 2),
-                height: maxH + padding * 2,
-                color: rgb(0, 0, 0),
-                opacity: 1.0
-              });
-              i = j; // Avanzar el cursor
-              break;
-            }
-          }
-        }
-      }
-
-      // 3. Aplicar recuadros manuales dibujados por el usuario para esta página
+      // 2. Aplicar recuadros manuales trazados por el usuario para esta página
       if (recuadrosManuales && recuadrosManuales.length > 0) {
         const recuadrosPagina = recuadrosManuales.filter(r => r.pagina === pageNum);
         for (const r of recuadrosPagina) {
@@ -747,7 +820,7 @@ export class PdfCensuraService {
     };
   }
 
-  private normalizarTexto(txt: string): string {
+  public normalizarTexto(txt: string): string {
     return (txt || '')
       .toLowerCase()
       .normalize('NFD')

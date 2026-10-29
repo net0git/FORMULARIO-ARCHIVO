@@ -317,180 +317,35 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       }
     }
 
-    // 2. Coincidencias automáticas en el texto de la página activa
+    // 2. Coincidencias automáticas en el texto de la página activa (idénticas a la censura del PDF)
     if (this.pdfDocJsInstance && this.anchoCanvasActual > 0) {
       try {
         const page = await this.pdfDocJsInstance.getPage(this.paginaActualManual);
-        const viewport = page.getViewport({ scale: this.escalaManual });
         const textContent = await page.getTextContent();
 
-        // Lista de items de texto con sus coordenadas
-        const rawItems = (textContent.items as any[]).filter(it => it.str && it.str.trim());
-        const items = rawItems.map(it => ({
-          str: it.str,
-          strNorm: this.normalizarTexto(it.str),
-          tx: it.transform[4],
-          ty: it.transform[5],
-          fontH: Math.hypot(it.transform[0], it.transform[1]) || it.height || 12,
-          fontW: it.width || (it.str.length * 8)
-        }));
+        const cajasDetectadas = this.pdfCensuraService.calcularCajasPagina(
+          textContent,
+          this.sujetos,
+          this.anchoPaginaPdfPuntos,
+          this.altoPaginaPdfPuntos,
+          this.paginaActualManual,
+          { censurarEtiquetas: this.censurarEtiquetas }
+        );
 
-        // Agrupar items por línea visual (mismo Y con tolerancia de 4pt)
-        const itemsOrdenados = [...items].sort((a, b) => {
-          if (Math.abs(a.ty - b.ty) > 4) return b.ty - a.ty;
-          return a.tx - b.tx;
-        });
-
-        const lineasVisuales: any[][] = [];
-        let lineaActual: any[] = [];
-        let yActual: number | null = null;
-        for (const it of itemsOrdenados) {
-          if (yActual === null || Math.abs(it.ty - yActual) > 4) {
-            if (lineaActual.length > 0) {
-              lineasVisuales.push(lineaActual.sort((a, b) => a.tx - b.tx));
-            }
-            lineaActual = [it];
-            yActual = it.ty;
-          } else {
-            lineaActual.push(it);
-          }
-        }
-        if (lineaActual.length > 0) {
-          lineasVisuales.push(lineaActual.sort((a, b) => a.tx - b.tx));
-        }
-
-        // A) Buscar nombres de sujetos procesales principales (palabras juntas o divididas en la línea)
-        for (const s of this.sujetosPrincipales) {
-          if (!s.seleccionado || !s.valor || s.valor.trim().length <= 1) continue;
-
-          const palabras = this.normalizarTexto(s.valor).split(' ').filter(w => w.length > 1);
-          const combinaciones = this.pdfCensuraService.generarCombinacionesPalabras(s.valor);
-
-          for (const linea of lineasVisuales) {
-            const textoLineaNorm = linea.map(it => it.strNorm).join(' ');
-
-            // Coincide si alguna combinación exacta de palabras está en la línea
-            const coincideCombinacion = combinaciones.some(c =>
-              this.pdfCensuraService.contieneTerminoExacto(textoLineaNorm, c)
-            );
-            // O si todas las palabras clave del nombre están en la línea
-            const coincidenTodas =
-              palabras.length >= 2 &&
-              palabras.every(p => this.pdfCensuraService.contieneTerminoExacto(textoLineaNorm, p));
-
-            if (coincideCombinacion || coincidenTodas) {
-              // Encontrar items de la línea que corresponden a estas palabras
-              const itemsMatch = linea.filter(it =>
-                palabras.some(p => it.strNorm === p || this.pdfCensuraService.contieneTerminoExacto(it.strNorm, p))
-              );
-
-              if (itemsMatch.length > 0) {
-                const minX = Math.min(...itemsMatch.map(it => it.tx));
-                const maxX = Math.max(...itemsMatch.map(it => it.tx + it.fontW));
-                const minY = Math.min(...itemsMatch.map(it => it.ty));
-                const maxY = Math.max(...itemsMatch.map(it => it.ty + it.fontH));
-
-                const [x1, y1] = viewport.convertToViewportPoint(minX, maxY);
-                const [x2, y2] = viewport.convertToViewportPoint(maxX, minY);
-
-                const left = Math.min(x1, x2) - 2;
-                const top = Math.min(y1, y2) - 2;
-                const width = Math.abs(x2 - x1) + 4;
-                const height = Math.abs(y2 - y1) + 4;
-
-                const xPct = Math.max(0, (left / viewport.width) * 100);
-                const yPct = Math.max(0, (top / viewport.height) * 100);
-                const wPct = Math.min(100, (width / viewport.width) * 100);
-                const hPct = Math.min(100, (height / viewport.height) * 100);
-
-                const cajaId = `vis_p${this.paginaActualManual}_suj_${s.id}_${Math.round(xPct)}_${Math.round(yPct)}`;
-
-                if (!this.cajasExcluidas.has(cajaId)) {
-                  cajas.push({
-                    id: cajaId,
-                    tipo: 'sujeto',
-                    sujetoId: s.id,
-                    etiqueta: s.etiqueta || s.categoria,
-                    valorTexto: s.valor,
-                    xPct,
-                    yPct,
-                    wPct,
-                    hPct
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        // B) Buscar datos personales anidados de cada sujeto y datos huérfanos
-        const todosLosDatosPersonales: SujetoCensura[] = [];
-        for (const s of this.sujetosPrincipales) {
-          if (s.datosPersonales && s.datosPersonales.length > 0) {
-            todosLosDatosPersonales.push(...s.datosPersonales);
-          }
-        }
-        todosLosDatosPersonales.push(...this.datosPersonalesHuerfanos);
-
-        for (const dp of todosLosDatosPersonales) {
-          if (!dp.seleccionado || !dp.valor || dp.valor.trim().length <= 1) continue;
-          const dpNorm = this.normalizarTexto(dp.valor);
-          if (dpNorm.length < 2) continue;
-          const palabrasDp = dpNorm.split(' ').filter(w => w.length > 1);
-
-          for (const linea of lineasVisuales) {
-            const textoLineaNorm = linea.map(it => it.strNorm).join(' ');
-
-            // Coincidencia exacta de término, subcadena de dígitos o todas las palabras
-            const coincide =
-              this.pdfCensuraService.contieneTerminoExacto(textoLineaNorm, dp.valor) ||
-              (dpNorm.length >= 4 && textoLineaNorm.includes(dpNorm)) ||
-              (palabrasDp.length >= 2 && palabrasDp.every(p => this.pdfCensuraService.contieneTerminoExacto(textoLineaNorm, p)));
-
-            if (coincide) {
-              const itemsMatch = linea.filter(it =>
-                this.pdfCensuraService.contieneTerminoExacto(it.strNorm, dp.valor) ||
-                (dpNorm.length >= 4 && it.strNorm.includes(dpNorm)) ||
-                palabrasDp.some(p => it.strNorm === p || this.pdfCensuraService.contieneTerminoExacto(it.strNorm, p))
-              );
-
-              if (itemsMatch.length > 0) {
-                const minX = Math.min(...itemsMatch.map(it => it.tx));
-                const maxX = Math.max(...itemsMatch.map(it => it.tx + it.fontW));
-                const minY = Math.min(...itemsMatch.map(it => it.ty));
-                const maxY = Math.max(...itemsMatch.map(it => it.ty + it.fontH));
-
-                const [x1, y1] = viewport.convertToViewportPoint(minX, maxY);
-                const [x2, y2] = viewport.convertToViewportPoint(maxX, minY);
-
-                const left = Math.min(x1, x2) - 2;
-                const top = Math.min(y1, y2) - 2;
-                const width = Math.abs(x2 - x1) + 4;
-                const height = Math.abs(y2 - y1) + 4;
-
-                const xPct = Math.max(0, (left / viewport.width) * 100);
-                const yPct = Math.max(0, (top / viewport.height) * 100);
-                const wPct = Math.min(100, (width / viewport.width) * 100);
-                const hPct = Math.min(100, (height / viewport.height) * 100);
-
-                const cajaId = `vis_p${this.paginaActualManual}_dp_${dp.id}_${Math.round(xPct)}_${Math.round(yPct)}`;
-
-                if (!this.cajasExcluidas.has(cajaId)) {
-                  cajas.push({
-                    id: cajaId,
-                    tipo: 'dato_personal',
-                    sujetoId: dp.sujetoPadreId,
-                    datoPersonalId: dp.id,
-                    etiqueta: dp.etiqueta || dp.categoria,
-                    valorTexto: dp.valor,
-                    xPct,
-                    yPct,
-                    wPct,
-                    hPct
-                  });
-                }
-              }
-            }
+        for (const cd of cajasDetectadas) {
+          if (!this.cajasExcluidas.has(cd.id)) {
+            cajas.push({
+              id: cd.id,
+              tipo: cd.tipo,
+              sujetoId: cd.terminoId,
+              datoPersonalId: cd.tipo === 'dato_personal' ? cd.terminoId : undefined,
+              etiqueta: cd.etiqueta,
+              valorTexto: cd.valorTexto,
+              xPct: cd.xPct,
+              yPct: cd.yPct,
+              wPct: cd.wPct,
+              hPct: cd.hPct
+            });
           }
         }
       } catch (err) {
