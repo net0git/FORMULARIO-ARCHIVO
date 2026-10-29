@@ -504,9 +504,10 @@ export class PdfCensuraService {
       censurarEtiquetas?: boolean;
       colorHex?: string;
       recuadrosManuales?: RecuadroManualCensura[];
+      cajasExcluidas?: { pagina: number; xPct: number; yPct: number; wPct: number; hPct: number }[];
     } = {}
   ): Promise<{ pdfBytes: Uint8Array; totalCoincidencias: number }> {
-        const { censurarEtiquetas = false, recuadrosManuales = [] } = opciones;
+        const { censurarEtiquetas = false, recuadrosManuales = [], cajasExcluidas = [] } = opciones;
 
     // Aplanar los sujetos principales y sus datos personales anidados
     const todosLosSujetosAplanados: SujetoCensura[] = [];
@@ -569,6 +570,22 @@ export class PdfCensuraService {
       const pagePdfLib = pdfLibDoc.getPage(pageNum - 1);
       const { width: pageWidth, height: pageHeight } = pagePdfLib.getSize();
 
+      // Helper para comprobar si una región coincide con alguna caja excluida por el usuario
+      const estaExcluido = (pNum: number, rx: number, ry: number, rw: number, rh: number) => {
+        if (!cajasExcluidas || cajasExcluidas.length === 0) return false;
+        const xPct = (rx / pageWidth) * 100;
+        const yPct = ((pageHeight - (ry + rh)) / pageHeight) * 100;
+        const wPct = (rw / pageWidth) * 100;
+        const hPct = (rh / pageHeight) * 100;
+        return cajasExcluidas.some(ex => {
+          if (ex.pagina !== pNum) return false;
+          const solapeX = Math.max(0, Math.min(xPct + wPct, ex.xPct + ex.wPct) - Math.max(xPct, ex.xPct));
+          const solapeY = Math.max(0, Math.min(yPct + hPct, ex.yPct + ex.hPct) - Math.max(yPct, ex.yPct));
+          return solapeX > 0.5 * Math.min(wPct, ex.wPct) && solapeY > 0.5 * Math.min(hPct, ex.hPct);
+        });
+      };
+
+
       const items: { str: string; tx: number; ty: number; w: number; h: number }[] = [];
 
       for (const rawItem of textContent.items as any[]) {
@@ -613,8 +630,15 @@ export class PdfCensuraService {
           }
 
           if (coincide) {
-            totalCoincidencias++;
             const padding = 3;
+            const rx = Math.max(0, item.tx - padding);
+            const ry = Math.max(0, item.ty - padding);
+            const rw = Math.min(pageWidth - item.tx, item.w + padding * 2);
+            const rh = item.h + padding * 2;
+            if (estaExcluido(pageNum, rx, ry, rw, rh)) {
+              continue;
+            }
+            totalCoincidencias++;
             pagePdfLib.drawRectangle({
               x: Math.max(0, item.tx - padding),
               y: Math.max(0, item.ty - padding),
