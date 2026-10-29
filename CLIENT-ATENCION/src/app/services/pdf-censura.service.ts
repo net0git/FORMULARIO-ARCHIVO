@@ -382,7 +382,7 @@ export class PdfCensuraService {
       .trim()
       .split(/\s+/)
       .map(p => p.replace(/[,;.:\-_/]/g, '').trim())
-      .filter(p => p.length > 1);
+      .filter(p => p.length >= 3);
 
     if (palabras.length === 0) return [];
     if (palabras.length === 1) return [palabras[0].toUpperCase()];
@@ -431,6 +431,24 @@ export class PdfCensuraService {
 
   generarVariantesNombre(nombre: string): string[] {
     return this.generarCombinacionesPalabras(nombre);
+  }
+
+  /**
+   * Determina si una palabra o frase aparece como termino exacto (con limites de palabra)
+   * en el texto normalizado, evitando coincidencias parciales dentro de otras palabras (ej. letra J en Juzgado)
+   */
+  contieneTerminoExacto(textoNormalizado: string, termino: string): boolean {
+    if (!textoNormalizado || !termino) return false;
+    const t = this.normalizarTexto(termino);
+    if (!t || (t.length < 3 && !/^\d{8}$/.test(t))) return false;
+    const caracteresEspeciales = "[](){}.*+?^$|\\";
+    let tEscapado = "";
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      tEscapado += caracteresEspeciales.indexOf(c) !== -1 ? "\\" + c : c;
+    }
+    const regex = new RegExp("(?:^|\\s)" + tEscapado + "(?=$|\\s)", "i");
+    return regex.test(textoNormalizado);
   }
 
   /**
@@ -580,7 +598,7 @@ export class PdfCensuraService {
           // Verificar contra todas las variantes conocidas
           for (const varTxt of t.variantes) {
             const varNorm = this.normalizarTexto(varTxt);
-            if (textoItemNorm.includes(varNorm)) {
+            if (this.contieneTerminoExacto(textoItemNorm, varTxt)) {
               coincide = true;
               break;
             }
@@ -588,7 +606,7 @@ export class PdfCensuraService {
 
           // Si contiene todas las palabras clave del nombre juntas en el mismo item
           if (!coincide && t.palabrasClave.length >= 2) {
-            const todasEnItem = t.palabrasClave.every(p => textoItemNorm.includes(p));
+            const todasEnItem = t.palabrasClave.every(p => this.contieneTerminoExacto(textoItemNorm, p));
             if (todasEnItem) {
               coincide = true;
             }
@@ -649,7 +667,7 @@ export class PdfCensuraService {
             // Coincidencia con alguna variante completa
             for (const varTxt of t.variantes) {
               const varNorm = this.normalizarTexto(varTxt);
-              if (accumNorm.includes(varNorm)) {
+              if (this.contieneTerminoExacto(accumNorm, varTxt)) {
                 coincideVentana = true;
                 break;
               }

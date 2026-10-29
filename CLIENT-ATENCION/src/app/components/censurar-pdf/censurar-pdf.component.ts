@@ -354,7 +354,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
             // Coincidencia con alguna permutación/combinación dentro del item
             for (const cNorm of combinacionesNorm) {
-              if (item.strNorm.includes(cNorm)) {
+              if (this.pdfCensuraService.contieneTerminoExacto(item.strNorm, cNorm)) {
                 coincide = true;
                 break;
               }
@@ -362,7 +362,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
             // O si todas las palabras clave del nombre aparecen juntas en este item
             if (!coincide && palabrasClave.length >= 2) {
-              if (palabrasClave.every(p => item.strNorm.includes(p))) {
+              if (palabrasClave.every(p => this.pdfCensuraService.contieneTerminoExacto(item.strNorm, p))) {
                 coincide = true;
               }
             }
@@ -398,7 +398,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
               if (dpNorm.length < 2) continue;
 
               for (const item of items) {
-                if (item.strNorm.includes(dpNorm)) {
+                if (this.pdfCensuraService.contieneTerminoExacto(item.strNorm, dp.valor)) {
                   const [x1, y1] = viewport.convertToViewportPoint(item.tx, item.ty + item.fontH);
                   const [x2, y2] = viewport.convertToViewportPoint(item.tx + item.fontW, item.ty);
 
@@ -433,7 +433,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
           if (gNorm.length < 2) continue;
 
           for (const item of items) {
-            if (item.strNorm.includes(gNorm)) {
+            if (this.pdfCensuraService.contieneTerminoExacto(item.strNorm, g.valor)) {
               const [x1, y1] = viewport.convertToViewportPoint(item.tx, item.ty + item.fontH);
               const [x2, y2] = viewport.convertToViewportPoint(item.tx + item.fontW, item.ty);
 
