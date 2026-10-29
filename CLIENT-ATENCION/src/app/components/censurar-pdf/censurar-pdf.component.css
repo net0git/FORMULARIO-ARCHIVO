@@ -10,8 +10,8 @@
 /* COLUMNA IZQUIERDA: CONTROL Y ANÁLISIS                                     */
 /* ========================================================================= */
 .censura-col-control {
-  flex: 0 0 460px;
-  max-width: 480px;
+  flex: 1;
+  min-height: 0;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -1696,4 +1696,57 @@
 .btn-del-anidado:hover {
   color: #ef4444;
   background: #fee2e2;
+}
+
+
+/* ========================================================================= */
+/* CONTENEDOR DE LA COLUMNA IZQUIERDA Y BOTÓN EXTERNO                        */
+/* ========================================================================= */
+.censura-col-control-wrapper {
+  flex: 0 0 460px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.action-btn-area-outside {
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.btn-apply-censura-outside {
+  width: 100%;
+  padding: 13px 20px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.btn-apply-censura-outside:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45);
+}
+
+.btn-apply-censura-outside:disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.6;
 }

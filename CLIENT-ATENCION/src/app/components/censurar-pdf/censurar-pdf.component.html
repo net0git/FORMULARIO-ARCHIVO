@@ -2,7 +2,8 @@
   <!-- ======================================================================= -->
   <!-- COLUMNA IZQUIERDA: PANEL DE CONTROL Y ANÁLISIS                          -->
   <!-- ======================================================================= -->
-  <div class="censura-col-control">
+  <div class="censura-col-control-wrapper">
+    <div class="censura-col-control">
     <div class="control-header">
       <div class="header-icon">
         <i class="fa-solid fa-user-shield"></i>
@@ -332,59 +333,24 @@
         </div>
       </div>
 
-      <!-- Opciones avanzadas de censura -->
-      <div class="options-box">
-        <label class="option-check-label">
-          <input type="checkbox" [(ngModel)]="censurarEtiquetas" />
-          <span>Censurar también etiquetas en el texto (ej: <code>DEMANDANTE:</code>, <code>Domicilio:</code>, etc.)</span>
-        </label>
+      
       </div>
-
-      <!-- 4. BOTÓN DE ACCIÓN: CENSURAR Y DESCARGAR -->
-      <div class="action-btn-area">
-        <button
-          type="button"
-          class="btn-apply-censura"
-          [disabled]="censurando || totalElementosACensurar === 0"
-          (click)="censurarYDescargar()"
-        >
-          <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
-          <i class="fa-solid fa-download" *ngIf="!censurando"></i>
-          <span>
-            {{ censurando ? 'Censurando y descargando PDF...' : ('Censurar y Descargar (' + totalElementosACensurar + ')') }}
-          </span>
-        </button>
-      </div>
-
-      <!-- 5. RESULTADO EXITOSO -->
-      <div *ngIf="censuraAplicada" class="success-banner fade-in">
-        <div class="success-icon">
-          <i class="fa-solid fa-circle-check"></i>
         </div>
-        <div class="success-details">
-          <h4>¡Documento censurado y descargado con éxito!</h4>
-          <p>
-            Se aplicaron los bloques de censura permanentes sobre el PDF descargado.
-            {{ totalCensurados > 0 ? (totalCensurados + ' ocurrencias tapadas.') : '' }}
-          </p>
-          <div class="success-actions">
-            <button
-              type="button"
-              class="btn-download-censurado"
-              (click)="censurarYDescargar()"
-            >
-              <i class="fa-solid fa-arrow-down-to-bracket"></i> Descargar de nuevo
-            </button>
-            <button
-              type="button"
-              class="btn-reset-censura"
-              (click)="restablecer()"
-            >
-              <i class="fa-solid fa-arrow-rotate-left"></i> Cargar Otro Archivo
-            </button>
-          </div>
-        </div>
-      </div>
+
+    <!-- 4. BOTÓN DE ACCIÓN: CENSURAR Y DESCARGAR (FUERA DEL CARD LATERAL) -->
+    <div class="action-btn-area-outside" *ngIf="analisisCompletado && !analizando">
+      <button
+        type="button"
+        class="btn-apply-censura-outside"
+        [disabled]="censurando || totalElementosACensurar === 0"
+        (click)="censurarYDescargar()"
+      >
+        <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
+        <i class="fa-solid fa-download" *ngIf="!censurando"></i>
+        <span>
+          {{ censurando ? 'Censurando y descargando PDF...' : ('Censurar y Descargar (' + totalElementosACensurar + ')') }}
+        </span>
+      </button>
     </div>
   </div>
 
@@ -496,7 +462,7 @@
         >
           <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
           <i class="fa-solid fa-download" *ngIf="!censurando"></i>
-          <span>Censurar y Descargar</span>
+          <span>Censurar y Descargar ({{ totalElementosACensurar }})</span>
         </button>
       </div>
     </div>
