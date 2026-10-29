@@ -60,6 +60,88 @@
   line-height: 1.3;
 }
 
+/* BANNER DE ESTADO DE LA IA LOCAL */
+.ia-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.ia-status-banner.online {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.ia-status-banner.offline {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.ia-status-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ia-status-banner.online .ia-status-info i {
+  color: #16a34a;
+  font-size: 16px;
+}
+
+.ia-status-banner.offline .ia-status-info i {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.ia-status-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ia-status-title {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.ia-status-subtitle {
+  font-size: 10.5px;
+  opacity: 0.85;
+}
+
+.ia-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.btn-reconnect-ia {
+  background: #e2e8f0;
+  border: none;
+  color: #475569;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-reconnect-ia:hover {
+  background: #cbd5e1;
+}
+
 /* 1. ZONA DE CARGA (DRAG & DROP) */
 .upload-dropzone {
   border: 2px dashed #cbd5e1;

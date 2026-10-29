@@ -13,6 +13,34 @@
       </div>
     </div>
 
+    <!-- ESTADO DE LA IA LOCAL (OLLAMA) -->
+    <div class="ia-status-banner" [class.online]="ollamaConectado" [class.offline]="!ollamaConectado">
+      <div class="ia-status-info">
+        <i class="fa-solid" [ngClass]="ollamaConectado ? 'fa-brain' : 'fa-circle-exclamation'"></i>
+        <div class="ia-status-text">
+          <span class="ia-status-title">
+            {{ ollamaConectado ? 'IA Local Conectada (Llama 3.2 3B)' : 'IA Local Desconectada' }}
+          </span>
+          <span class="ia-status-subtitle">
+            {{ ollamaConectado ? 'Análisis semántico profundo en CPU activa' : 'Usando reglas rápidas' }}
+          </span>
+        </div>
+      </div>
+      <label class="ia-toggle-label" *ngIf="ollamaConectado">
+        <input type="checkbox" [(ngModel)]="usarIaSiDisponible" />
+        <span>Usar IA</span>
+      </label>
+      <button
+        type="button"
+        class="btn-reconnect-ia"
+        *ngIf="!ollamaConectado"
+        (click)="verificarIaLocal()"
+        title="Reintentar conexión con Ollama"
+      >
+        <i class="fa-solid fa-rotate"></i>
+      </button>
+    </div>
+
     <!-- 1. ZONA DE CARGA DE ARCHIVO (DRAG & DROP) -->
     <div
       class="upload-dropzone"

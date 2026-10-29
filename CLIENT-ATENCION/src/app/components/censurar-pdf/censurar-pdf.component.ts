@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -8,6 +8,7 @@ import {
   ResultadoAnalisisPdf,
   CategoriaCensura
 } from '../../services/pdf-censura.service';
+import { IaExpedienteService } from '../../services/ia-expediente.service';
 
 @Component({
   selector: 'app-censurar-pdf',
@@ -16,7 +17,7 @@ import {
   templateUrl: './censurar-pdf.component.html',
   styleUrls: ['./censurar-pdf.component.css']
 })
-export class CensurarPdfComponent implements OnDestroy {
+export class CensurarPdfComponent implements OnInit, OnDestroy {
   // Estado del archivo
   archivoCargado: File | null = null;
   nombreArchivo = '';
@@ -30,6 +31,12 @@ export class CensurarPdfComponent implements OnDestroy {
   progresoPorcentaje = 0;
   analisisCompletado = false;
   fuePorOcr = false;
+
+  // Estado de IA Local (Ollama)
+  ollamaConectado = false;
+  usarIaSiDisponible = true;
+  estadoIaMensaje = 'Verificando IA local...';
+  modelosIa: string[] = [];
 
   // Lista de datos detectados para censurar
   sujetos: SujetoCensura[] = [];
@@ -56,8 +63,20 @@ export class CensurarPdfComponent implements OnDestroy {
 
   constructor(
     private pdfCensuraService: PdfCensuraService,
+    public iaService: IaExpedienteService,
     private sanitizer: DomSanitizer
   ) {}
+
+  async ngOnInit(): Promise<void> {
+    await this.verificarIaLocal();
+  }
+
+  async verificarIaLocal(): Promise<void> {
+    const res = await this.iaService.verificarConexion();
+    this.ollamaConectado = res.conectado;
+    this.modelosIa = res.modelos;
+    this.estadoIaMensaje = res.mensaje;
+  }
 
   ngOnDestroy(): void {
     this.limpiarUrls();
@@ -135,6 +154,35 @@ export class CensurarPdfComponent implements OnDestroy {
       this.numPaginas = resultado.numPaginas;
       this.sujetos = resultado.sujetos;
       this.fuePorOcr = resultado.fuePorOcr;
+
+      // Si la IA local (Ollama) está disponible y activada, enriquecer el análisis
+      if (this.ollamaConectado && this.usarIaSiDisponible && resultado.textoCompleto) {
+        try {
+          this.progresoMensaje = 'Analizando con IA local (Llama 3.2)...';
+          this.progresoPorcentaje = 85;
+
+          const sujetosIa = await this.iaService.analizarExpedienteConIa(
+            resultado.textoCompleto,
+            msg => (this.progresoMensaje = msg)
+          );
+
+          if (sujetosIa && sujetosIa.length > 0) {
+            // Fusionar inteligentemente sin duplicar
+            for (const sIa of sujetosIa) {
+              const yaExiste = this.sujetos.some(
+                s => s.valor.toLowerCase() === sIa.valor.toLowerCase() ||
+                     (s.campo && sIa.campo && s.campo === sIa.campo)
+              );
+              if (!yaExiste) {
+                this.sujetos.push(sIa);
+              }
+            }
+          }
+        } catch (iaErr) {
+          console.warn('No se pudo completar el análisis con IA (se conservan reglas):', iaErr);
+        }
+      }
+
       this.analisisCompletado = true;
     } catch (err: any) {
       console.error('Error al procesar el archivo PDF:', err);
