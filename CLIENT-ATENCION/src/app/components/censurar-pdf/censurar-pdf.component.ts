@@ -13,8 +13,9 @@ import { IaExpedienteService } from '../../services/ia-expediente.service';
 
 export interface CajaCensuraVisual {
   id: string;
-  tipo: 'sujeto' | 'manual';
+  tipo: 'sujeto' | 'dato_personal' | 'manual';
   sujetoId?: string;
+  datoPersonalId?: string;
   recuadroManualId?: string;
   etiqueta?: string;
   valorTexto?: string;
@@ -54,7 +55,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   estadoIaMensaje = 'Verificando IA local...';
   modelosIa: string[] = [];
 
-  // Lista de datos detectados para censurar
+  // Lista de sujetos procesales (cada uno contiene anidados sus datos personales)
   sujetos: SujetoCensura[] = [];
   nuevoTextoManual = '';
   nuevaCategoriaManual: CategoriaCensura = 'DEMANDANTE';
@@ -206,11 +207,25 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
           if (sujetosIa && sujetosIa.length > 0) {
             for (const sIa of sujetosIa) {
-              const yaExiste = this.sujetos.some(
-                s => s.valor.toLowerCase() === sIa.valor.toLowerCase() ||
-                     (s.campo && sIa.campo && s.campo === sIa.campo)
+              const existente = this.sujetos.find(
+                s => s.categoria === sIa.categoria || this.pdfCensuraService.sonMismoNombre(s.valor, sIa.valor)
               );
-              if (!yaExiste) {
+
+              if (existente) {
+                // Fusionar datos personales anidados sin duplicar
+                if (sIa.datosPersonales && sIa.datosPersonales.length > 0) {
+                  existente.datosPersonales = existente.datosPersonales || [];
+                  for (const dpIa of sIa.datosPersonales) {
+                    const yaTiene = existente.datosPersonales.some(
+                      d => d.categoria === dpIa.categoria && d.valor.toLowerCase() === dpIa.valor.toLowerCase()
+                    );
+                    if (!yaTiene) {
+                      dpIa.sujetoPadreId = existente.id;
+                      existente.datosPersonales.push(dpIa);
+                    }
+                  }
+                }
+              } else {
                 this.sujetos.push(sIa);
               }
             }
@@ -221,7 +236,6 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       }
 
       this.analisisCompletado = true;
-      // Actualizar las cajas rojas sobre el documento
       this.actualizarCajasVisiblesPagina();
     } catch (err: any) {
       console.error('Error al procesar el archivo PDF:', err);
@@ -280,6 +294,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
   /**
    * Identifica los recuadros rojos translúcidos en la página activa
+   * Separando palabras de los nombres y buscando todas las combinaciones y cambios de orden
    */
   async actualizarCajasVisiblesPagina(): Promise<void> {
     const cajas: CajaCensuraVisual[] = [];
@@ -301,67 +316,144 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       }
     }
 
-    // 2. Coincidencias de texto de sujetos seleccionados en la página activa
+    // 2. Coincidencias en el texto de la página activa
     if (this.pdfDocJsInstance && this.anchoCanvasActual > 0) {
       try {
         const page = await this.pdfDocJsInstance.getPage(this.paginaActualManual);
         const viewport = page.getViewport({ scale: this.escalaManual });
         const textContent = await page.getTextContent();
 
-        const terminosValidos = this.sujetos
-          .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
-          .map(s => {
-            const variantes = new Set<string>();
-            variantes.add(s.valor.trim());
-            if (s.variantes) {
-              s.variantes.forEach(v => variantes.add(v.trim()));
-            }
-            return {
-              sujeto: s,
-              variantesNorm: Array.from(variantes).map(v => this.normalizarTexto(v))
-            };
+        // Lista de items del texto con sus coordenadas
+        const items: any[] = [];
+        for (const it of textContent.items as any[]) {
+          if (!it.str || !it.transform) continue;
+          const strNorm = this.normalizarTexto(it.str);
+          if (!strNorm) continue;
+          items.push({
+            str: it.str,
+            strNorm,
+            tx: it.transform[4],
+            ty: it.transform[5],
+            fontH: Math.hypot(it.transform[0], it.transform[1]) || it.height || 12,
+            fontW: it.width || (it.str.length * 8)
           });
+        }
 
-        if (terminosValidos.length > 0) {
-          for (const item of textContent.items as any[]) {
-            if (!item.str || !item.transform) continue;
-            const strNorm = this.normalizarTexto(item.str);
-            if (!strNorm) continue;
+        // A) Buscar nombres de sujetos procesales (separando palabras y combinaciones de orden)
+        for (const s of this.sujetosPrincipales) {
+          if (!s.seleccionado || !s.valor || s.valor.trim().length <= 1) continue;
 
-            for (const t of terminosValidos) {
-              const coincide = t.variantesNorm.some(v => strNorm.includes(v) || (v.length > 4 && v.includes(strNorm)));
-              if (coincide) {
-                const tx = item.transform[4];
-                const ty = item.transform[5];
-                const fontH = Math.hypot(item.transform[0], item.transform[1]) || item.height || 12;
-                const fontW = item.width || (item.str.length * fontH * 0.5);
+          // Generar todas las combinaciones exactas de las palabras del nombre
+          const combinaciones = this.pdfCensuraService.generarCombinacionesPalabras(s.valor);
+          const combinacionesNorm = combinaciones.map(c => this.normalizarTexto(c)).filter(Boolean);
+          const palabrasClave = this.normalizarTexto(s.valor).split(' ').filter(w => w.length > 2);
 
-                const [x1, y1] = viewport.convertToViewportPoint(tx, ty + fontH);
-                const [x2, y2] = viewport.convertToViewportPoint(tx + fontW, ty);
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            let coincide = false;
 
-                const left = Math.min(x1, x2) - 2;
-                const top = Math.min(y1, y2) - 2;
-                const width = Math.abs(x2 - x1) + 4;
-                const height = Math.abs(y2 - y1) + 4;
-
-                const xPct = Math.max(0, (left / viewport.width) * 100);
-                const yPct = Math.max(0, (top / viewport.height) * 100);
-                const wPct = Math.min(100 - xPct, (width / viewport.width) * 100);
-                const hPct = Math.min(100 - yPct, (height / viewport.height) * 100);
-
-                cajas.push({
-                  id: 'box_' + Math.random().toString(36).substring(2, 9),
-                  tipo: 'sujeto',
-                  sujetoId: t.sujeto.id,
-                  etiqueta: t.sujeto.campo || t.sujeto.categoria,
-                  valorTexto: item.str,
-                  xPct,
-                  yPct,
-                  wPct,
-                  hPct
-                });
+            // Coincidencia con alguna permutación/combinación dentro del item
+            for (const cNorm of combinacionesNorm) {
+              if (item.strNorm.includes(cNorm)) {
+                coincide = true;
                 break;
               }
+            }
+
+            // O si todas las palabras clave del nombre aparecen juntas en este item
+            if (!coincide && palabrasClave.length >= 2) {
+              if (palabrasClave.every(p => item.strNorm.includes(p))) {
+                coincide = true;
+              }
+            }
+
+            if (coincide) {
+              const [x1, y1] = viewport.convertToViewportPoint(item.tx, item.ty + item.fontH);
+              const [x2, y2] = viewport.convertToViewportPoint(item.tx + item.fontW, item.ty);
+
+              const left = Math.min(x1, x2) - 2;
+              const top = Math.min(y1, y2) - 2;
+              const width = Math.abs(x2 - x1) + 4;
+              const height = Math.abs(y2 - y1) + 4;
+
+              cajas.push({
+                id: 'vis_suj_' + Math.random().toString(36).substring(2, 9),
+                tipo: 'sujeto',
+                sujetoId: s.id,
+                etiqueta: s.etiqueta || s.categoria,
+                valorTexto: item.str,
+                xPct: Math.max(0, (left / viewport.width) * 100),
+                yPct: Math.max(0, (top / viewport.height) * 100),
+                wPct: Math.min(100, (width / viewport.width) * 100),
+                hPct: Math.min(100, (height / viewport.height) * 100)
+              });
+            }
+          }
+
+          // B) Buscar también sus datos personales anidados
+          if (s.datosPersonales && s.datosPersonales.length > 0) {
+            for (const dp of s.datosPersonales) {
+              if (!dp.seleccionado || !dp.valor || dp.valor.trim().length <= 1) continue;
+              const dpNorm = this.normalizarTexto(dp.valor);
+              if (dpNorm.length < 2) continue;
+
+              for (const item of items) {
+                if (item.strNorm.includes(dpNorm)) {
+                  const [x1, y1] = viewport.convertToViewportPoint(item.tx, item.ty + item.fontH);
+                  const [x2, y2] = viewport.convertToViewportPoint(item.tx + item.fontW, item.ty);
+
+                  const left = Math.min(x1, x2) - 2;
+                  const top = Math.min(y1, y2) - 2;
+                  const width = Math.abs(x2 - x1) + 4;
+                  const height = Math.abs(y2 - y1) + 4;
+
+                  cajas.push({
+                    id: 'vis_dp_' + Math.random().toString(36).substring(2, 9),
+                    tipo: 'dato_personal',
+                    sujetoId: s.id,
+                    datoPersonalId: dp.id,
+                    etiqueta: dp.etiqueta || dp.categoria,
+                    valorTexto: dp.valor,
+                    xPct: Math.max(0, (left / viewport.width) * 100),
+                    yPct: Math.max(0, (top / viewport.height) * 100),
+                    wPct: Math.min(100, (width / viewport.width) * 100),
+                    hPct: Math.min(100, (height / viewport.height) * 100)
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // C) Buscar datos personales huérfanos generales
+        for (const g of this.datosPersonalesHuerfanos) {
+          if (!g.seleccionado || !g.valor || g.valor.trim().length <= 1) continue;
+          const gNorm = this.normalizarTexto(g.valor);
+          if (gNorm.length < 2) continue;
+
+          for (const item of items) {
+            if (item.strNorm.includes(gNorm)) {
+              const [x1, y1] = viewport.convertToViewportPoint(item.tx, item.ty + item.fontH);
+              const [x2, y2] = viewport.convertToViewportPoint(item.tx + item.fontW, item.ty);
+
+              const left = Math.min(x1, x2) - 2;
+              const top = Math.min(y1, y2) - 2;
+              const width = Math.abs(x2 - x1) + 4;
+              const height = Math.abs(y2 - y1) + 4;
+
+              cajas.push({
+                id: 'vis_gen_' + Math.random().toString(36).substring(2, 9),
+                tipo: 'dato_personal',
+                datoPersonalId: g.id,
+                etiqueta: g.etiqueta || g.categoria,
+                valorTexto: g.valor,
+                xPct: Math.max(0, (left / viewport.width) * 100),
+                yPct: Math.max(0, (top / viewport.height) * 100),
+                wPct: Math.min(100, (width / viewport.width) * 100),
+                hPct: Math.min(100, (height / viewport.height) * 100)
+              });
+              break;
             }
           }
         }
@@ -385,6 +477,20 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       if (sujeto) {
         sujeto.seleccionado = false;
       }
+    } else if (caja.tipo === 'dato_personal' && caja.datoPersonalId) {
+      // Buscar en los datos anidados de cada sujeto
+      for (const s of this.sujetos) {
+        if (s.datosPersonales) {
+          const dp = s.datosPersonales.find(d => d.id === caja.datoPersonalId);
+          if (dp) {
+            dp.seleccionado = false;
+            break;
+          }
+        }
+      }
+      // O en huérfanos
+      const h = this.sujetos.find(s => s.id === caja.datoPersonalId);
+      if (h) h.seleccionado = false;
     } else if (caja.tipo === 'manual' && caja.recuadroManualId) {
       this.eliminarRecuadroManual(caja.recuadroManualId);
     }
@@ -526,27 +632,42 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   // =========================================================================
-  // GESTIÓN DE SUJETOS Y TÉRMINOS A CENSURAR
+  // GESTIÓN DE SUJETOS Y DATOS PERSONALES ANIDADOS
   // =========================================================================
   get sujetosPrincipales(): SujetoCensura[] {
     return this.sujetos.filter(s => !s.esDatoPersonal);
   }
 
-  get datosPersonales(): SujetoCensura[] {
-    return this.sujetos.filter(s => s.esDatoPersonal);
+  get datosPersonalesHuerfanos(): SujetoCensura[] {
+    return this.sujetos.filter(s => s.esDatoPersonal && !s.sujetoPadreId);
   }
 
-  seleccionarTodos(valor: boolean): void {
-    this.sujetos.forEach(s => (s.seleccionado = valor));
+  toggleSujetoPadre(s: SujetoCensura): void {
+    if (s.datosPersonales && s.datosPersonales.length > 0) {
+      s.datosPersonales.forEach(d => (d.seleccionado = s.seleccionado));
+    }
     this.actualizarCajasVisiblesPagina();
   }
 
-  seleccionarPorGrupo(tipo: 'sujetos' | 'personales', valor: boolean): void {
+  toggleDatoHijo(hijo: SujetoCensura, padre: SujetoCensura): void {
+    this.actualizarCajasVisiblesPagina();
+  }
+
+  eliminarDatoHijo(padre: SujetoCensura, idHijo: string): void {
+    if (padre.datosPersonales) {
+      const idx = padre.datosPersonales.findIndex(d => d.id === idHijo);
+      if (idx !== -1) {
+        padre.datosPersonales.splice(idx, 1);
+        this.actualizarCajasVisiblesPagina();
+      }
+    }
+  }
+
+  seleccionarTodos(valor: boolean): void {
     this.sujetos.forEach(s => {
-      if (tipo === 'sujetos' && !s.esDatoPersonal) {
-        s.seleccionado = valor;
-      } else if (tipo === 'personales' && s.esDatoPersonal) {
-        s.seleccionado = valor;
+      s.seleccionado = valor;
+      if (s.datosPersonales) {
+        s.datosPersonales.forEach(d => (d.seleccionado = valor));
       }
     });
     this.actualizarCajasVisiblesPagina();
@@ -557,7 +678,14 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   get cantidadSeleccionados(): number {
-    return this.sujetos.filter(s => s.seleccionado).length;
+    let total = 0;
+    for (const s of this.sujetos) {
+      if (s.seleccionado) total++;
+      if (s.datosPersonales) {
+        total += s.datosPersonales.filter(d => d.seleccionado).length;
+      }
+    }
+    return total;
   }
 
   get totalElementosACensurar(): number {
@@ -576,20 +704,33 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
     const texto = this.nuevoTextoManual.trim();
     if (!texto) return;
 
-    const variantes = this.pdfCensuraService.generarVariantesNombre(texto);
     const esPersonal = ['DOMICILIO', 'TELEFONO', 'DNI', 'DATO_PERSONAL'].includes(this.nuevaCategoriaManual);
 
-    this.sujetos.push({
-      id: 'manual_' + Math.random().toString(36).substring(2, 9),
-      categoria: this.nuevaCategoriaManual,
-      campo: this.nuevaCategoriaManual,
-      etiqueta: this.nuevaCategoriaManual,
-      valor: texto.toUpperCase(),
-      variantes,
-      seleccionado: true,
-      censurarEtiqueta: false,
-      esDatoPersonal: esPersonal
-    });
+    if (esPersonal) {
+      // Si hay al menos un sujeto procesal, sugerir agregarlo al primer sujeto o como huérfano
+      this.sujetos.push({
+        id: 'manual_' + Math.random().toString(36).substring(2, 9),
+        categoria: this.nuevaCategoriaManual,
+        campo: this.nuevaCategoriaManual,
+        etiqueta: this.nuevaCategoriaManual,
+        valor: texto,
+        seleccionado: true,
+        censurarEtiqueta: false,
+        esDatoPersonal: true
+      });
+    } else {
+      this.sujetos.push({
+        id: 'manual_' + Math.random().toString(36).substring(2, 9),
+        categoria: this.nuevaCategoriaManual,
+        campo: this.nuevaCategoriaManual,
+        etiqueta: this.nuevaCategoriaManual,
+        valor: texto.toUpperCase(),
+        seleccionado: true,
+        censurarEtiqueta: false,
+        esDatoPersonal: false,
+        datosPersonales: []
+      });
+    }
 
     this.nuevoTextoManual = '';
     this.actualizarCajasVisiblesPagina();
@@ -601,8 +742,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   async censurarYDescargar(): Promise<void> {
     if (!this.archivoCargado && !this.rawPdfOriginalBytes) return;
 
-    const seleccionados = this.sujetos.filter(s => s.seleccionado);
-    if (seleccionados.length === 0 && this.recuadrosManuales.length === 0) {
+    if (this.totalElementosACensurar === 0) {
       alert('Por favor selecciona al menos un dato o dibuja un área en el documento para censurar.');
       return;
     }
@@ -629,7 +769,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       this.totalCensurados = res.totalCoincidencias;
       this.censuraAplicada = true;
 
-      // Descarga automática inmediata del PDF con cajas negras permanentes
+      // Descarga automática inmediata del PDF censurado
       const blob = new Blob([res.pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

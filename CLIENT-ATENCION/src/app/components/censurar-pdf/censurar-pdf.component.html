@@ -108,8 +108,8 @@
     <div *ngIf="analisisCompletado && !analizando" class="detection-section fade-in">
       <div class="section-title-row">
         <div>
-          <h3>Datos Identificados para Censurar</h3>
-          <p class="section-desc">Revisa y determina si estás de acuerdo con cada dato a censurar:</p>
+          <h3>Sujetos Procesales y Datos Personales</h3>
+          <p class="section-desc">Revisa cada parte procesal y los datos personales identificados debajo:</p>
         </div>
         <div class="quick-toggle-btns" *ngIf="sujetos.length > 0">
           <button type="button" class="btn-text-action" (click)="seleccionarTodos(true)">Todos</button>
@@ -123,100 +123,121 @@
         <i class="fa-solid fa-circle-info"></i>
         <div>
           <strong>No se detectaron sujetos automáticamente en la portada ni en datos personales.</strong>
-          <p>Puedes dibujar recuadros directamente sobre el visor derecho o agregar términos manualmente.</p>
+          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario inferior.</p>
         </div>
       </div>
 
-      <!-- GRUPO 1: SUJETOS PROCESALES Y VARIANTES DE NOMBRES -->
+      <!-- SUJETOS PROCESALES CON SUS DATOS PERSONALES ANIDADOS -->
       <div class="grupo-seccion" *ngIf="sujetosPrincipales.length > 0">
-        <div class="grupo-header">
-          <span class="grupo-title">
-            <i class="fa-solid fa-users"></i> Sujetos Procesales (y variantes de nombres)
-          </span>
-          <div class="grupo-actions">
-            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('sujetos', true)">Marcar</button>
-            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('sujetos', false)">Desmarcar</button>
-          </div>
-        </div>
-
         <div class="sujetos-list">
           <div
             *ngFor="let s of sujetosPrincipales"
-            class="sujeto-card"
-            [class.checked]="s.seleccionado"
-            [class.cat-demandante]="s.categoria === 'DEMANDANTE'"
-            [class.cat-demandado]="s.categoria === 'DEMANDADO'"
-            [class.cat-agraviado]="s.categoria === 'AGRAVIADO'"
-            [class.cat-otro]="s.categoria === 'OTRO'"
+            class="sujeto-card-container"
           >
-            <div class="sujeto-card-checkbox">
-              <label class="custom-checkbox">
-                <input type="checkbox" [(ngModel)]="s.seleccionado" (change)="onToggleSujeto()" />
-                <span class="checkmark"></span>
-              </label>
-            </div>
-
-            <div class="sujeto-card-body">
-              <div class="sujeto-meta-row">
-                <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
-                  {{ s.categoria }}
-                </span>
-                <span class="sujeto-status">
-                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
-                </span>
-              </div>
-              <input
-                type="text"
-                [(ngModel)]="s.valor"
-                class="sujeto-input-text"
-                placeholder="Nombre a censurar"
-                (change)="onToggleSujeto()"
-              />
-
-              <!-- Muestra variantes de orden de nombres detectadas/generadas -->
-              <div class="variantes-box" *ngIf="s.variantes && s.variantes.length > 1">
-                <span class="variantes-label">
-                  <i class="fa-solid fa-arrows-split-up-and-left"></i> Variantes incluidas:
-                </span>
-                <span class="variante-chip" *ngFor="let v of s.variantes">
-                  {{ v }}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="btn-remove-sujeto"
-              (click)="eliminarSujeto(s.id)"
-              title="Quitar de la lista"
+            <!-- TARJETA DEL SUJETO PROCESAL PRINCIPAL (SIN VARIANTES) -->
+            <div
+              class="sujeto-card"
+              [class.checked]="s.seleccionado"
+              [class.cat-demandante]="s.categoria === 'DEMANDANTE'"
+              [class.cat-demandado]="s.categoria === 'DEMANDADO'"
+              [class.cat-agraviado]="s.categoria === 'AGRAVIADO'"
+              [class.cat-otro]="s.categoria === 'OTRO'"
             >
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
+              <div class="sujeto-card-checkbox">
+                <label class="custom-checkbox">
+                  <input type="checkbox" [(ngModel)]="s.seleccionado" (change)="toggleSujetoPadre(s)" />
+                  <span class="checkmark"></span>
+                </label>
+              </div>
+
+              <div class="sujeto-card-body">
+                <div class="sujeto-meta-row">
+                  <span class="badge-categoria" [ngClass]="'badge-' + s.categoria.toLowerCase()">
+                    {{ s.categoria }}
+                  </span>
+                  <span class="sujeto-status">
+                    {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="s.valor"
+                  class="sujeto-input-text"
+                  placeholder="Nombre a censurar"
+                  (change)="onToggleSujeto()"
+                />
+              </div>
+
+              <button
+                type="button"
+                class="btn-remove-sujeto"
+                (click)="eliminarSujeto(s.id)"
+                title="Quitar de la lista"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+
+            <!-- DATOS PERSONALES IDENTIFICADOS DEBAJO DE CADA SUJETO PROCESAL -->
+            <div
+              class="datos-personales-anidados"
+              *ngIf="s.datosPersonales && s.datosPersonales.length > 0"
+            >
+              <div class="anidados-header">
+                <i class="fa-solid fa-address-card"></i> Datos personales de esta parte:
+              </div>
+              <div class="anidados-list">
+                <div
+                  *ngFor="let dp of s.datosPersonales"
+                  class="anidado-item-row"
+                  [class.checked]="dp.seleccionado"
+                >
+                  <label class="anidado-checkbox">
+                    <input type="checkbox" [(ngModel)]="dp.seleccionado" (change)="toggleDatoHijo(dp, s)" />
+                    <span class="anidado-checkmark"></span>
+                  </label>
+
+                  <span class="anidado-badge-campo">{{ dp.etiqueta || dp.categoria }}:</span>
+
+                  <input
+                    type="text"
+                    [(ngModel)]="dp.valor"
+                    class="anidado-input-val"
+                    (change)="onToggleSujeto()"
+                  />
+
+                  <button
+                    type="button"
+                    class="btn-del-anidado"
+                    (click)="eliminarDatoHijo(s, dp.id)"
+                    title="Quitar este dato"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- GRUPO 2: DATOS PERSONALES DE LAS PARTES (DOMICILIO, TELÉFONO, DNI, EDAD, ETC.) -->
-      <div class="grupo-seccion" *ngIf="datosPersonales.length > 0">
-        <div class="grupo-header personal-header">
+      <!-- OTROS DATOS PERSONALES (SI HUBIERA HUÉRFANOS NO VINCULADOS A NINGÚN SUJETO) -->
+      <div class="grupo-seccion" *ngIf="datosPersonalesHuerfanos.length > 0">
+        <div class="grupo-header">
           <span class="grupo-title">
-            <i class="fa-solid fa-address-card"></i> Datos Personales de las Partes (III)
+            <i class="fa-solid fa-address-card"></i> Otros Datos Personales Detectados
           </span>
-          <div class="grupo-actions">
-            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', true)">Marcar todos</button>
-            <button type="button" class="btn-mini-link" (click)="seleccionarPorGrupo('personales', false)">Desmarcar</button>
-          </div>
         </div>
 
         <div class="sujetos-list">
           <div
-            *ngFor="let s of datosPersonales"
+            *ngFor="let h of datosPersonalesHuerfanos"
             class="sujeto-card card-personal"
-            [class.checked]="s.seleccionado"
+            [class.checked]="h.seleccionado"
           >
             <div class="sujeto-card-checkbox">
               <label class="custom-checkbox">
-                <input type="checkbox" [(ngModel)]="s.seleccionado" (change)="onToggleSujeto()" />
+                <input type="checkbox" [(ngModel)]="h.seleccionado" (change)="onToggleSujeto()" />
                 <span class="checkmark"></span>
               </label>
             </div>
@@ -224,17 +245,16 @@
             <div class="sujeto-card-body">
               <div class="sujeto-meta-row">
                 <span class="badge-campo-personal">
-                  <i class="fa-solid fa-tag"></i> {{ s.campo || s.etiqueta || s.categoria }}
+                  <i class="fa-solid fa-tag"></i> {{ h.campo || h.etiqueta || h.categoria }}
                 </span>
                 <span class="sujeto-status">
-                  {{ s.seleccionado ? 'Se censurará' : 'Conservar' }}
+                  {{ h.seleccionado ? 'Se censurará' : 'Conservar' }}
                 </span>
               </div>
               <input
                 type="text"
-                [(ngModel)]="s.valor"
+                [(ngModel)]="h.valor"
                 class="sujeto-input-text"
-                placeholder="Dato personal a censurar"
                 (change)="onToggleSujeto()"
               />
             </div>
@@ -242,7 +262,7 @@
             <button
               type="button"
               class="btn-remove-sujeto"
-              (click)="eliminarSujeto(s.id)"
+              (click)="eliminarSujeto(h.id)"
               title="Quitar este dato"
             >
               <i class="fa-solid fa-trash-can"></i>
@@ -485,7 +505,7 @@
     <div class="interactive-hint-bar" *ngIf="archivoCargado">
       <i class="fa-solid fa-circle-info"></i>
       <span>
-        Los campos con <strong>recuadro rojo translúcido</strong> están a punto de ser censurados. Haz clic en <strong>✕</strong> en cualquier recuadro para excluirlo, o <strong>arrastra el ratón</strong> para dibujar un área adicional.
+        Los campos con <strong>recuadro rojo translúcido</strong> se censurarán. Clic en <strong>✕</strong> para excluir, o <strong>arrastra el ratón</strong> para censurar un área manual.
       </span>
     </div>
 
@@ -501,15 +521,15 @@
         <div class="feature-bullets">
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Visualización directa de datos a censurar resaltados en rojo translúcido</span>
+            <span>Búsqueda inteligente de palabras exactas y combinaciones con cualquier cambio de orden</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Botón ✕ sobre cada recuadro para excluirlo fácilmente de la censura</span>
+            <span>Datos personales identificados organizados directamente debajo de cada sujeto procesal</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Selección manual dibujando con el ratón sobre firmas, sellos o párrafos</span>
+            <span>Visualización en vivo con recuadros rojos translúcidos y botón ✕ de exclusión</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>

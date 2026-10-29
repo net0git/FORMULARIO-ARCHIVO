@@ -20,8 +20,10 @@ export interface SujetoCensura {
   etiqueta?: string;
   seleccionado: boolean;
   censurarEtiqueta?: boolean;
-  variantes?: string[]; // Ej: ["VICTORIA HINOJOSA PACCO", "HINOJOSA PACCO VICTORIA"]
+  variantes?: string[]; // Combinaciones y permutaciones internas
   esDatoPersonal?: boolean;
+  sujetoPadreId?: string;
+  datosPersonales?: SujetoCensura[]; // Datos personales anidados bajo este sujeto procesal
 }
 
 
@@ -193,7 +195,8 @@ export class PdfCensuraService {
                 variantes,
                 seleccionado: true,
                 censurarEtiqueta: false,
-                esDatoPersonal: false
+                esDatoPersonal: false,
+                datosPersonales: []
               });
             }
           }
@@ -321,70 +324,113 @@ export class PdfCensuraService {
                   esDatoPersonal: true
                 });
               }
-            } else {
+                        } else {
               // Es dato personal (Edad, Natural de, Estado Civil, Ocupación, DNI, Domicilio, Teléfono)
-              const yaExiste = sujetos.some(
-                s => s.campo === nombreCampo && s.valor.toLowerCase() === valorExtraido.toLowerCase()
-              );
-              if (!yaExiste) {
-                sujetos.push({
-                  id: 'pers_' + Math.random().toString(36).substring(2, 9),
-                  categoria: cp.categoria,
-                  campo: nombreCampo,
-                  etiqueta: cp.campo,
-                  valor: valorExtraido,
-                  seleccionado: true,
-                  censurarEtiqueta: false,
-                  esDatoPersonal: true
-                });
+              // Identificar al sujeto procesal padre según el encabezado actual
+              let sujetoPadre = sujetos.find(s => {
+                if (parteActual.includes('DEMAND')) return s.categoria === 'DEMANDADO';
+                if (parteActual.includes('AGRAV')) return s.categoria === 'AGRAVIADO';
+                if (parteActual.includes('DEMANDANTE')) return s.categoria === 'DEMANDANTE';
+                return false;
+              });
+
+              const nuevoDato: SujetoCensura = {
+                id: 'pers_' + Math.random().toString(36).substring(2, 9),
+                categoria: cp.categoria,
+                campo: nombreCampo,
+                etiqueta: cp.campo,
+                valor: valorExtraido,
+                seleccionado: true,
+                censurarEtiqueta: false,
+                esDatoPersonal: true,
+                sujetoPadreId: sujetoPadre ? sujetoPadre.id : undefined
+              };
+
+              if (sujetoPadre) {
+                sujetoPadre.datosPersonales = sujetoPadre.datosPersonales || [];
+                const yaEnPadre = sujetoPadre.datosPersonales.some(
+                  (d: SujetoCensura) => d.etiqueta === cp.campo && d.valor.toLowerCase() === valorExtraido.toLowerCase()
+                );
+                if (!yaEnPadre) {
+                  sujetoPadre.datosPersonales.push(nuevoDato);
+                }
+              } else {
+                const yaExiste = sujetos.some(
+                  s => s.campo === nombreCampo && s.valor.toLowerCase() === valorExtraido.toLowerCase()
+                );
+                if (!yaExiste) {
+                  sujetos.push(nuevoDato);
+                }
               }
             }
           }
         }
       }
     }
-
     return sujetos;
   }
 
   /**
    * Genera variantes y permutaciones de nombres (ej. Apellidos Nombres <-> Nombres Apellidos)
    */
-  generarVariantesNombre(nombre: string): string[] {
-    const palabras = nombre
+    /**
+   * Separa las palabras del nombre y genera todas sus combinaciones exactas y permutaciones
+   * para cubrir cambios de orden en el expediente judicial (ej: Apellidos + Nombres o Nombres + Apellidos)
+   */
+  generarCombinacionesPalabras(nombre: string): string[] {
+    const palabras = (nombre || '')
       .trim()
       .split(/\s+/)
-      .map(p => p.replace(/[,;.]/g, '').toUpperCase())
+      .map(p => p.replace(/[,;.:\-_/]/g, '').trim())
       .filter(p => p.length > 1);
 
-    const variantes = new Set<string>();
     if (palabras.length === 0) return [];
+    if (palabras.length === 1) return [palabras[0].toUpperCase()];
 
-    variantes.add(palabras.join(' '));
+    const combinaciones = new Set<string>();
 
-    // Si tiene 3 palabras (ej: HINOJOSA PACCO VICTORIA)
-    if (palabras.length === 3) {
-      // Nombres Apellidos: VICTORIA HINOJOSA PACCO
-      variantes.add(`${palabras[2]} ${palabras[0]} ${palabras[1]}`);
-      // Con coma: HINOJOSA PACCO, VICTORIA
-      variantes.add(`${palabras[0]} ${palabras[1]}, ${palabras[2]}`);
-      // Otra permutación posible
-      variantes.add(`${palabras[1]} ${palabras[2]} ${palabras[0]}`);
-    } else if (palabras.length === 4) {
-      // Si tiene 4 palabras (ej: PEREZ HUAMANI JUAN CARLOS)
-      // Nombres Apellidos: JUAN CARLOS PEREZ HUAMANI
-      variantes.add(`${palabras[2]} ${palabras[3]} ${palabras[0]} ${palabras[1]}`);
-      // Con coma: PEREZ HUAMANI, JUAN CARLOS
-      variantes.add(`${palabras[0]} ${palabras[1]}, ${palabras[2]} ${palabras[3]}`);
-      // Un solo nombre adelante: JUAN PEREZ HUAMANI CARLOS
-      variantes.add(`${palabras[2]} ${palabras[0]} ${palabras[1]} ${palabras[3]}`);
-    } else if (palabras.length === 2) {
-      // Si tiene 2 palabras: PEREZ JUAN <-> JUAN PEREZ
-      variantes.add(`${palabras[1]} ${palabras[0]}`);
-      variantes.add(`${palabras[0]}, ${palabras[1]}`);
+    // 1. Agregar el nombre completo original
+    combinaciones.add(palabras.join(' ').toUpperCase());
+
+    // 2. Permutaciones completas (hasta 4 palabras para rendimiento O(N!))
+    const permutar = (arr: string[]): string[][] => {
+      if (arr.length <= 1) return [arr];
+      const res: string[][] = [];
+      for (let i = 0; i < arr.length; i++) {
+        const actual = arr[i];
+        const resto = [...arr.slice(0, i), ...arr.slice(i + 1)];
+        for (const p of permutar(resto)) {
+          res.push([actual, ...p]);
+        }
+      }
+      return res;
+    };
+
+    const palabrasBase = palabras.slice(0, 4);
+    const permutadas = permutar(palabrasBase);
+    for (const p of permutadas) {
+      const frase = p.join(' ').toUpperCase();
+      combinaciones.add(frase);
+      // Con coma tras los dos primeros (ej. "PEREZ HUAMANI, EVANGELINO")
+      if (p.length >= 3) {
+        combinaciones.add(`${p[0]} ${p[1]}, ${p.slice(2).join(' ')}`.toUpperCase());
+      }
     }
 
-    return Array.from(variantes);
+    // 3. Sub-combinaciones de pares contiguos (ej. los dos apellidos juntos o nombre y apellido)
+    for (let i = 0; i < palabras.length; i++) {
+      for (let j = 0; j < palabras.length; j++) {
+        if (i !== j) {
+          combinaciones.add(`${palabras[i]} ${palabras[j]}`.toUpperCase());
+        }
+      }
+    }
+
+    return Array.from(combinaciones);
+  }
+
+  generarVariantesNombre(nombre: string): string[] {
+    return this.generarCombinacionesPalabras(nombre);
   }
 
   /**
@@ -442,9 +488,24 @@ export class PdfCensuraService {
       recuadrosManuales?: RecuadroManualCensura[];
     } = {}
   ): Promise<{ pdfBytes: Uint8Array; totalCoincidencias: number }> {
-    const { censurarEtiquetas = false, recuadrosManuales = [] } = opciones;
+        const { censurarEtiquetas = false, recuadrosManuales = [] } = opciones;
 
-    const terminosValidos = sujetosACensurar
+    // Aplanar los sujetos principales y sus datos personales anidados
+    const todosLosSujetosAplanados: SujetoCensura[] = [];
+    for (const s of sujetosACensurar) {
+      if (s.seleccionado && s.valor && s.valor.trim().length > 1) {
+        todosLosSujetosAplanados.push(s);
+      }
+      if (s.datosPersonales && s.datosPersonales.length > 0) {
+        for (const dp of s.datosPersonales) {
+          if (dp.seleccionado && dp.valor && dp.valor.trim().length > 1) {
+            todosLosSujetosAplanados.push(dp);
+          }
+        }
+      }
+    }
+
+    const terminosValidos = todosLosSujetosAplanados
       .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
       .map(s => {
         const todasLasVariantes = new Set<string>();
@@ -453,7 +514,7 @@ export class PdfCensuraService {
           s.variantes.forEach(v => todasLasVariantes.add(v.trim()));
         }
         // Generar también variantes sobre la marcha
-        const varsCalculadas = this.generarVariantesNombre(s.valor);
+        const varsCalculadas = this.generarCombinacionesPalabras(s.valor);
         varsCalculadas.forEach(v => todasLasVariantes.add(v));
 
         const palabrasClave = s.valor

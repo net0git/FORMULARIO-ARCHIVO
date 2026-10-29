@@ -159,6 +159,10 @@ Responde únicamente el objeto JSON sin comentarios ni bloques de código.`;
   /**
    * Transforma la respuesta estructurada de la IA a la lista de SujetoCensura utilizada por el visor
    */
+    /**
+   * Transforma la respuesta estructurada de la IA a la lista de SujetoCensura utilizada por el visor,
+   * anidando los datos personales identificados directamente bajo cada sujeto procesal.
+   */
   private transformarRespuestaIaASujetos(res: RespuestaIaExpediente): SujetoCensura[] {
     const sujetos: SujetoCensura[] = [];
 
@@ -172,9 +176,9 @@ Responde únicamente el objeto JSON sin comentarios ni bloques de código.`;
             campo: 'Menor de Edad (Hijo/a)',
             etiqueta: 'MENOR HIJO',
             valor: menor.trim(),
-            variantes: [menor.trim()],
             seleccionado: true,
-            esDatoPersonal: true
+            esDatoPersonal: false,
+            datosPersonales: []
           });
         }
       }
@@ -184,23 +188,21 @@ Responde únicamente el objeto JSON sin comentarios ni bloques de código.`;
     if (res.agraviados && Array.isArray(res.agraviados)) {
       for (const agr of res.agraviados) {
         if (agr.nombre) {
-          const vars = [agr.nombre];
-          if (agr.alias_variantes) vars.push(...agr.alias_variantes);
-
-          sujetos.push({
+          const sujetoAgr: SujetoCensura = {
             id: 'ia_agr_' + Math.random().toString(36).substring(2, 9),
             categoria: 'AGRAVIADO',
             campo: 'Agraviada / Víctima',
             etiqueta: 'AGRAVIADA',
             valor: agr.nombre.trim(),
-            variantes: Array.from(new Set(vars.map(v => v.trim()))),
             seleccionado: true,
-            esDatoPersonal: true
-          });
-        }
+            esDatoPersonal: false,
+            datosPersonales: []
+          };
 
-        // Datos personales del agraviado
-        this.extraerCamposDetalle(sujetos, agr, 'AGRAVIADA');
+          // Anidar datos personales del agraviado directamente debajo de este sujeto
+          this.extraerCamposDetalle(sujetoAgr, agr, 'AGRAVIADA');
+          sujetos.push(sujetoAgr);
+        }
       }
     }
 
@@ -208,120 +210,120 @@ Responde únicamente el objeto JSON sin comentarios ni bloques de código.`;
     if (res.demandados_imputados && Array.isArray(res.demandados_imputados)) {
       for (const dem of res.demandados_imputados) {
         if (dem.nombre) {
-          const vars = [dem.nombre];
-          if (dem.alias_variantes) vars.push(...dem.alias_variantes);
-
-          sujetos.push({
+          const sujetoDem: SujetoCensura = {
             id: 'ia_dem_' + Math.random().toString(36).substring(2, 9),
             categoria: 'DEMANDADO',
             campo: 'Demandado / Imputado',
             etiqueta: 'DEMANDADO',
             valor: dem.nombre.trim(),
-            variantes: Array.from(new Set(vars.map(v => v.trim()))),
             seleccionado: true,
-            esDatoPersonal: true
-          });
-        }
+            esDatoPersonal: false,
+            datosPersonales: []
+          };
 
-        // Datos personales del demandado
-        this.extraerCamposDetalle(sujetos, dem, 'DEMANDADO');
+          // Anidar datos personales del demandado directamente debajo de este sujeto
+          this.extraerCamposDetalle(sujetoDem, dem, 'DEMANDADO');
+          sujetos.push(sujetoDem);
+        }
       }
     }
 
     return sujetos;
   }
 
-  private extraerCamposDetalle(sujetos: SujetoCensura[], obj: any, prefijo: string): void {
+  private extraerCamposDetalle(padre: SujetoCensura, obj: any, prefijo: string): void {
+    if (!padre.datosPersonales) padre.datosPersonales = [];
+
     if (obj.identificado && obj.identificado !== '<No Definido>') {
       const numDni = obj.identificado.replace(/[^0-9]/g, '');
       const val = numDni.length === 8 ? numDni : obj.identificado;
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_dni_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DNI',
         campo: `${prefijo}: DNI`,
         etiqueta: 'DNI',
         valor: val,
-        variantes: [val],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.telefono && obj.telefono.length > 5) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_tel_' + Math.random().toString(36).substring(2, 9),
         categoria: 'TELEFONO',
         campo: `${prefijo}: Teléfono`,
         etiqueta: 'Teléfono',
         valor: obj.telefono,
-        variantes: [obj.telefono, obj.telefono.replace(/[\-\s]/g, '')],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.domicilio && obj.domicilio.length > 6) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_dom_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DOMICILIO',
         campo: `${prefijo}: Domicilio`,
         etiqueta: 'Domicilio',
         valor: obj.domicilio,
-        variantes: [obj.domicilio],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.edad) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_edad_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DATO_PERSONAL',
         campo: `${prefijo}: Edad`,
         etiqueta: 'Edad',
         valor: String(obj.edad),
-        variantes: [String(obj.edad)],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.natural_de) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_nat_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DATO_PERSONAL',
         campo: `${prefijo}: Natural de`,
         etiqueta: 'Natural de',
         valor: obj.natural_de,
-        variantes: [obj.natural_de],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.estado_civil) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_ec_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DATO_PERSONAL',
         campo: `${prefijo}: Estado Civil`,
         etiqueta: 'Estado Civil',
         valor: obj.estado_civil,
-        variantes: [obj.estado_civil],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
 
     if (obj.ocupacion) {
-      sujetos.push({
+      padre.datosPersonales.push({
         id: 'ia_oc_' + Math.random().toString(36).substring(2, 9),
         categoria: 'DATO_PERSONAL',
         campo: `${prefijo}: Ocupación`,
         etiqueta: 'Ocupación',
         valor: obj.ocupacion,
-        variantes: [obj.ocupacion],
         seleccionado: true,
-        esDatoPersonal: true
+        esDatoPersonal: true,
+        sujetoPadreId: padre.id
       });
     }
   }
