@@ -123,7 +123,7 @@
         <i class="fa-solid fa-circle-info"></i>
         <div>
           <strong>No se detectaron sujetos automáticamente en la portada ni en datos personales.</strong>
-          <p>Puedes agregar manualmente los nombres o datos a censurar utilizando el formulario inferior.</p>
+          <p>Puedes dibujar recuadros directamente sobre el visor derecho o agregar términos manualmente.</p>
         </div>
       </div>
 
@@ -151,7 +151,7 @@
           >
             <div class="sujeto-card-checkbox">
               <label class="custom-checkbox">
-                <input type="checkbox" [(ngModel)]="s.seleccionado" />
+                <input type="checkbox" [(ngModel)]="s.seleccionado" (change)="onToggleSujeto()" />
                 <span class="checkmark"></span>
               </label>
             </div>
@@ -170,6 +170,7 @@
                 [(ngModel)]="s.valor"
                 class="sujeto-input-text"
                 placeholder="Nombre a censurar"
+                (change)="onToggleSujeto()"
               />
 
               <!-- Muestra variantes de orden de nombres detectadas/generadas -->
@@ -215,7 +216,7 @@
           >
             <div class="sujeto-card-checkbox">
               <label class="custom-checkbox">
-                <input type="checkbox" [(ngModel)]="s.seleccionado" />
+                <input type="checkbox" [(ngModel)]="s.seleccionado" (change)="onToggleSujeto()" />
                 <span class="checkmark"></span>
               </label>
             </div>
@@ -234,6 +235,7 @@
                 [(ngModel)]="s.valor"
                 class="sujeto-input-text"
                 placeholder="Dato personal a censurar"
+                (change)="onToggleSujeto()"
               />
             </div>
 
@@ -249,7 +251,7 @@
         </div>
       </div>
 
-      <!-- FORMULARIO PARA AGREGAR DATO ADICIONAL MANUAL (COLOCADO ENCIMA DE ÁREAS MANUALES DIBUJADAS) -->
+      <!-- FORMULARIO PARA AGREGAR DATO ADICIONAL MANUAL (ENCIMA DE ÁREAS MANUALES) -->
       <div class="add-manual-box">
         <label><i class="fa-solid fa-plus"></i> Agregar dato adicional para censurar:</label>
         <div class="add-manual-row">
@@ -280,7 +282,7 @@
         </div>
       </div>
 
-      <!-- ÁREAS MANUALES DIBUJADAS (COLOCADO DEBAJO DE AGREGAR DATO ADICIONAL) -->
+      <!-- ÁREAS MANUALES DIBUJADAS -->
       <div class="grupo-seccion seccion-manual" *ngIf="recuadrosManuales.length > 0">
         <div class="grupo-header">
           <span class="grupo-title">
@@ -292,7 +294,7 @@
         </div>
 
         <div class="recuadros-chips-list">
-          <div *ngFor="let r of recuadrosManuales; let idx = index" class="recuadro-item-chip">
+          <div *ngFor="let r of recuadrosManuales" class="recuadro-item-chip">
             <span class="recuadro-chip-text" (click)="irAPaginaManual(r.pagina)">
               <i class="fa-regular fa-square-full"></i>
               <strong>{{ r.descripcion }}</strong>
@@ -318,47 +320,47 @@
         </label>
       </div>
 
-      <!-- 4. BOTÓN DE ACCIÓN: APLICAR CENSURA -->
+      <!-- 4. BOTÓN DE ACCIÓN: CENSURAR Y DESCARGAR -->
       <div class="action-btn-area">
         <button
           type="button"
           class="btn-apply-censura"
           [disabled]="censurando || totalElementosACensurar === 0"
-          (click)="aplicarCensura()"
+          (click)="censurarYDescargar()"
         >
           <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
-          <i class="fa-solid fa-shield-halved" *ngIf="!censurando"></i>
+          <i class="fa-solid fa-download" *ngIf="!censurando"></i>
           <span>
-            {{ censurando ? 'Procesando y censurando PDF...' : ('Censurar Datos Aprobados (' + totalElementosACensurar + ')') }}
+            {{ censurando ? 'Censurando y descargando PDF...' : ('Censurar y Descargar (' + totalElementosACensurar + ')') }}
           </span>
         </button>
       </div>
 
-      <!-- 5. RESULTADO EXITOSO Y DESCARGA -->
+      <!-- 5. RESULTADO EXITOSO -->
       <div *ngIf="censuraAplicada" class="success-banner fade-in">
         <div class="success-icon">
           <i class="fa-solid fa-circle-check"></i>
         </div>
         <div class="success-details">
-          <h4>¡Documento censurado con éxito!</h4>
+          <h4>¡Documento censurado y descargado con éxito!</h4>
           <p>
-            Se aplicaron los bloques de censura sobre el documento.
-            {{ totalCensurados > 0 ? (totalCensurados + ' ocurrencias tapadas permanentemente.') : '' }}
+            Se aplicaron los bloques de censura permanentes sobre el PDF descargado.
+            {{ totalCensurados > 0 ? (totalCensurados + ' ocurrencias tapadas.') : '' }}
           </p>
           <div class="success-actions">
             <button
               type="button"
               class="btn-download-censurado"
-              (click)="descargarPdfCensurado()"
+              (click)="censurarYDescargar()"
             >
-              <i class="fa-solid fa-download"></i> Descargar Documento Censurado
+              <i class="fa-solid fa-arrow-down-to-bracket"></i> Descargar de nuevo
             </button>
             <button
               type="button"
               class="btn-reset-censura"
               (click)="restablecer()"
             >
-              <i class="fa-solid fa-arrow-rotate-left"></i> Nuevo Archivo
+              <i class="fa-solid fa-arrow-rotate-left"></i> Cargar Otro Archivo
             </button>
           </div>
         </div>
@@ -367,192 +369,165 @@
   </div>
 
   <!-- ======================================================================= -->
-  <!-- COLUMNA DERECHA: VISOR INTERACTIVO DEL DOCUMENTO                        -->
+  <!-- COLUMNA DERECHA: VISOR UNIFICADO CON CAMPOS A CENSURAR EN ROJO          -->
   <!-- ======================================================================= -->
   <div class="censura-col-visor">
-    <div class="visor-topbar">
-      <div class="visor-tabs">
-        <button
-          type="button"
-          class="visor-tab-btn"
-          [class.active]="vistaVisor === 'manual'"
-          [disabled]="!archivoCargado"
-          (click)="cambiarVistaVisor('manual')"
-          title="Modo interactivo: dibuja recuadros con el ratón directamente sobre el documento"
-        >
-          <i class="fa-solid fa-pen-ruler"></i> Censura Manual (Dibujar)
-          <span *ngIf="recuadrosManuales.length > 0" class="badge-pill-counter">{{ recuadrosManuales.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="visor-tab-btn"
-          [class.active]="vistaVisor === 'original'"
-          [disabled]="!pdfOriginalUrl"
-          (click)="cambiarVistaVisor('original')"
-        >
-          <i class="fa-regular fa-file-pdf"></i> Documento Original
-        </button>
-
-        <button
-          type="button"
-          class="visor-tab-btn tab-censurado"
-          [class.active]="vistaVisor === 'censurado'"
-          [disabled]="!pdfCensuradoUrl"
-          (click)="cambiarVistaVisor('censurado')"
-        >
-          <i class="fa-solid fa-user-secret"></i> Documento Censurado
-          <span *ngIf="censuraAplicada" class="badge-pill-success">Listo</span>
-        </button>
-      </div>
-
-      <div class="visor-actions">
-        <button
-          type="button"
-          class="btn-visor-action"
-          (click)="abrirEnNuevaVentana()"
-          [disabled]="!archivoCargado"
-          title="Abrir en pestaña nueva"
-        >
-          <i class="fa-solid fa-up-right-from-square"></i>
-        </button>
-        <button
-          type="button"
-          class="btn-visor-action download-btn"
-          *ngIf="censuraAplicada"
-          (click)="descargarPdfCensurado()"
-          title="Descargar documento censurado"
-        >
-          <i class="fa-solid fa-download"></i> Descargar
-        </button>
-      </div>
-    </div>
-
-    <!-- Barra de herramientas de Censura Manual (Paginación, Zoom, Acciones) -->
-    <div class="manual-toolbar" *ngIf="archivoCargado && vistaVisor === 'manual'">
-      <div class="toolbar-group pagination-group">
-        <button
-          type="button"
-          class="btn-tool"
-          [disabled]="paginaActualManual <= 1 || renderizandoPaginaManual"
-          (click)="paginaAnteriorManual()"
-          title="Página anterior"
-        >
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-
-        <span class="page-indicator">
-          Página
-          <input
-            type="number"
-            class="input-page-num"
-            [min]="1"
-            [max]="totalPaginasManual"
-            [(ngModel)]="paginaActualManual"
-            (change)="irAPaginaManual(paginaActualManual)"
-          />
-          de {{ totalPaginasManual }}
+    <!-- Barra superior unificada del visor -->
+    <div class="visor-topbar" *ngIf="archivoCargado">
+      <div class="visor-doc-info">
+        <i class="fa-solid fa-file-pdf"></i>
+        <span class="visor-file-title" [title]="nombreArchivo">{{ nombreArchivo }}</span>
+        <span class="badge-campos-count" title="Campos a censurar en la página visible">
+          {{ cajasVisiblesPagina.length }} en esta pág.
         </span>
-
-        <button
-          type="button"
-          class="btn-tool"
-          [disabled]="paginaActualManual >= totalPaginasManual || renderizandoPaginaManual"
-          (click)="paginaSiguienteManual()"
-          title="Página siguiente"
-        >
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
       </div>
 
-      <div class="toolbar-divider"></div>
+      <!-- Controles de navegación y zoom -->
+      <div class="manual-toolbar-inline">
+        <div class="toolbar-group pagination-group">
+          <button
+            type="button"
+            class="btn-tool"
+            [disabled]="paginaActualManual <= 1 || renderizandoPaginaManual"
+            (click)="paginaAnteriorManual()"
+            title="Página anterior"
+          >
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
 
-      <div class="toolbar-group zoom-group">
-        <button
-          type="button"
-          class="btn-tool"
-          (click)="cambiarZoomManual(-0.2)"
-          [disabled]="escalaManual <= 0.6 || renderizandoPaginaManual"
-          title="Reducir zoom"
-        >
-          <i class="fa-solid fa-magnifying-glass-minus"></i>
-        </button>
-        <span class="zoom-value">{{ (escalaManual * 100) | number:'1.0-0' }}%</span>
-        <button
-          type="button"
-          class="btn-tool"
-          (click)="cambiarZoomManual(0.2)"
-          [disabled]="escalaManual >= 2.6 || renderizandoPaginaManual"
-          title="Aumentar zoom"
-        >
-          <i class="fa-solid fa-magnifying-glass-plus"></i>
-        </button>
+          <span class="page-indicator">
+            Página
+            <input
+              type="number"
+              class="input-page-num"
+              [min]="1"
+              [max]="totalPaginasManual"
+              [(ngModel)]="paginaActualManual"
+              (change)="irAPaginaManual(paginaActualManual)"
+            />
+            de {{ totalPaginasManual }}
+          </span>
+
+          <button
+            type="button"
+            class="btn-tool"
+            [disabled]="paginaActualManual >= totalPaginasManual || renderizandoPaginaManual"
+            (click)="paginaSiguienteManual()"
+            title="Página siguiente"
+          >
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group zoom-group">
+          <button
+            type="button"
+            class="btn-tool"
+            (click)="cambiarZoomManual(-0.2)"
+            [disabled]="escalaManual <= 0.6 || renderizandoPaginaManual"
+            title="Reducir zoom"
+          >
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <span class="zoom-value">{{ (escalaManual * 100) | number:'1.0-0' }}%</span>
+          <button
+            type="button"
+            class="btn-tool"
+            (click)="cambiarZoomManual(0.2)"
+            [disabled]="escalaManual >= 2.6 || renderizandoPaginaManual"
+            title="Aumentar zoom"
+          >
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group actions-group">
+          <button
+            type="button"
+            class="btn-tool-action"
+            [disabled]="recuadrosManuales.length === 0"
+            (click)="deshacerUltimoRecuadro()"
+            title="Deshacer último recuadro dibujado"
+          >
+            <i class="fa-solid fa-rotate-left"></i> Deshacer
+          </button>
+          <button
+            type="button"
+            class="btn-tool-action text-danger"
+            (click)="limpiarRecuadrosPaginaActual()"
+            title="Limpiar recuadros dibujados en esta página"
+          >
+            <i class="fa-regular fa-trash-can"></i> Limpiar pág.
+          </button>
+        </div>
       </div>
 
-      <div class="toolbar-divider"></div>
-
-      <div class="toolbar-group actions-group">
+      <div class="visor-right-action">
         <button
           type="button"
-          class="btn-tool-action"
-          [disabled]="recuadrosManuales.length === 0"
-          (click)="deshacerUltimoRecuadro()"
-          title="Deshacer último recuadro"
+          class="btn-topbar-download"
+          [disabled]="censurando || totalElementosACensurar === 0"
+          (click)="censurarYDescargar()"
+          title="Aplicar censura permanente y descargar PDF"
         >
-          <i class="fa-solid fa-rotate-left"></i> Deshacer
+          <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
+          <i class="fa-solid fa-download" *ngIf="!censurando"></i>
+          <span>Censurar y Descargar</span>
         </button>
-        <button
-          type="button"
-          class="btn-tool-action text-danger"
-          [disabled]="recuadrosPaginaActual.length === 0"
-          (click)="limpiarRecuadrosPaginaActual()"
-          title="Borrar todos los recuadros de esta página"
-        >
-          <i class="fa-regular fa-trash-can"></i> Limpiar pág.
-        </button>
-      </div>
-
-      <div class="toolbar-hint">
-        <i class="fa-solid fa-crosshairs"></i>
-        <span>Haz clic y arrastra con el cursor para censurar</span>
       </div>
     </div>
 
-    <!-- Contenido del Visor -->
-    <div class="visor-canvas-container" [class.manual-mode]="vistaVisor === 'manual'">
+    <!-- Barra de sugerencia e instrucción -->
+    <div class="interactive-hint-bar" *ngIf="archivoCargado">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>
+        Los campos con <strong>recuadro rojo translúcido</strong> están a punto de ser censurados. Haz clic en <strong>✕</strong> en cualquier recuadro para excluirlo, o <strong>arrastra el ratón</strong> para dibujar un área adicional.
+      </span>
+    </div>
+
+    <!-- Contenedor del Documento -->
+    <div class="visor-canvas-container manual-mode">
       <!-- Estado vacío cuando no hay archivo -->
       <div *ngIf="!archivoCargado" class="visor-empty-state">
         <div class="empty-icon-box">
           <i class="fa-solid fa-file-pdf"></i>
         </div>
         <h3>Visor de Documento</h3>
-        <p>Selecciona o arrastra un archivo PDF en el panel izquierdo para previsualizarlo aquí en tiempo real.</p>
+        <p>Selecciona o arrastra un archivo PDF en el panel izquierdo para visualizarlo aquí con los campos a censurar en rojo translúcido.</p>
         <div class="feature-bullets">
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Detección automática de Sujetos Procesales y variantes</span>
+            <span>Visualización directa de datos a censurar resaltados en rojo translúcido</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Censura manual visual dibujando rectángulos directamente con el ratón</span>
+            <span>Botón ✕ sobre cada recuadro para excluirlo fácilmente de la censura</span>
           </div>
           <div class="bullet-item">
             <i class="fa-solid fa-check"></i>
-            <span>Descarga inmediata con anonimización permanente</span>
+            <span>Selección manual dibujando con el ratón sobre firmas, sellos o párrafos</span>
+          </div>
+          <div class="bullet-item">
+            <i class="fa-solid fa-check"></i>
+            <span>Un solo clic en <strong>"Censurar y Descargar"</strong> para obtener el archivo listo</span>
           </div>
         </div>
       </div>
 
-      <!-- MODO 1: CANVAS INTERACTIVO PARA CENSURA MANUAL CON CURSOR -->
+      <!-- VISOR ÚNICO: CANVAS CON CAMPOS EN ROJO TRANSLÚCIDO -->
       <div
-        *ngIf="archivoCargado && vistaVisor === 'manual'"
+        *ngIf="archivoCargado"
         class="manual-canvas-wrapper"
       >
         <div class="page-render-box" [style.width.px]="anchoCanvasActual" [style.height.px]="altoCanvasActual">
           <!-- Canvas donde PDF.js dibuja la página original -->
           <canvas #pdfCanvasManual class="pdf-canvas-element"></canvas>
 
-          <!-- Capa transparente de dibujo interactivo -->
+          <!-- Capa interactiva de campos y dibujo -->
           <div
             class="manual-draw-overlay"
             (mousedown)="iniciarDibujoManual($event)"
@@ -571,20 +546,21 @@
               [style.height.px]="cajaTemporal.height"
             ></div>
 
-            <!-- Recuadros negros aplicados en la página actual -->
+            <!-- CAMPOS A PUNTO DE SER CENSURADOS EN ROJO TRANSLÚCIDO CON SU BOTÓN 'X' -->
             <div
-              *ngFor="let r of recuadrosPaginaActual"
-              class="redaction-box-confirmed"
-              [style.left.%]="r.pantalla?.xPct"
-              [style.top.%]="r.pantalla?.yPct"
-              [style.width.%]="r.pantalla?.wPct"
-              [style.height.%]="r.pantalla?.hPct"
+              *ngFor="let c of cajasVisiblesPagina"
+              class="redaction-box-preview"
+              [style.left.%]="c.xPct"
+              [style.top.%]="c.yPct"
+              [style.width.%]="c.wPct"
+              [style.height.%]="c.hPct"
+              [title]="'A punto de ser censurado: ' + (c.etiqueta || c.valorTexto || 'Área manual') + '. Clic en ✕ para excluir.'"
             >
               <button
                 type="button"
-                class="btn-delete-box"
-                (click)="eliminarRecuadroManual(r.id, $event)"
-                title="Quitar censura"
+                class="btn-remove-box"
+                (click)="quitarCensuraDeCaja(c, $event)"
+                title="Excluir de la censura"
               >
                 ✕
               </button>
@@ -592,22 +568,6 @@
           </div>
         </div>
       </div>
-
-      <!-- MODO 2: IFRAME DEL DOCUMENTO ORIGINAL -->
-      <iframe
-        *ngIf="archivoCargado && vistaVisor === 'original' && pdfOriginalUrl"
-        [src]="pdfOriginalUrl"
-        class="pdf-iframe-view"
-        title="Visor Documento Original"
-      ></iframe>
-
-      <!-- MODO 3: IFRAME DEL DOCUMENTO CENSURADO -->
-      <iframe
-        *ngIf="archivoCargado && vistaVisor === 'censurado' && pdfCensuradoUrl"
-        [src]="pdfCensuradoUrl"
-        class="pdf-iframe-view"
-        title="Visor Documento Censurado"
-      ></iframe>
     </div>
   </div>
 </div>

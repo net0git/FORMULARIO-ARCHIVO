@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import * as pdfjsLib from 'pdfjs-dist';
 import {
   PdfCensuraService,
@@ -11,6 +10,19 @@ import {
   RecuadroManualCensura
 } from '../../services/pdf-censura.service';
 import { IaExpedienteService } from '../../services/ia-expediente.service';
+
+export interface CajaCensuraVisual {
+  id: string;
+  tipo: 'sujeto' | 'manual';
+  sujetoId?: string;
+  recuadroManualId?: string;
+  etiqueta?: string;
+  valorTexto?: string;
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+}
 
 @Component({
   selector: 'app-censurar-pdf',
@@ -57,6 +69,9 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   private canvasListoParaRender = false;
   private pdfDocJsInstance: any = null;
 
+  // Cajas rojas translúcidas que se van a censurar en la página activa
+  cajasVisiblesPagina: CajaCensuraVisual[] = [];
+
   // Estado del trazado interactivo
   dibujando = false;
   private startX = 0;
@@ -74,22 +89,12 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   censuraAplicada = false;
   totalCensurados = 0;
 
-  // Visor de documentos
-  vistaVisor: 'manual' | 'original' | 'censurado' = 'manual';
-  pdfOriginalUrl: SafeResourceUrl | null = null;
-  pdfCensuradoUrl: SafeResourceUrl | null = null;
-  private pdfOriginalBlob: Blob | null = null;
-  private pdfCensuradoBlob: Blob | null = null;
   private rawPdfOriginalBytes: ArrayBuffer | null = null;
   private rawPdfCensuradoBytes: Uint8Array | null = null;
 
-  // Objetos URL para limpiar en ngOnDestroy
-  private objectUrlsToRevoke: string[] = [];
-
   constructor(
     private pdfCensuraService: PdfCensuraService,
-    public iaService: IaExpedienteService,
-    private sanitizer: DomSanitizer
+    public iaService: IaExpedienteService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -97,7 +102,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   ngAfterViewChecked(): void {
-    if (this.canvasListoParaRender && this.pdfCanvasRef && this.vistaVisor === 'manual' && this.rawPdfOriginalBytes) {
+    if (this.canvasListoParaRender && this.pdfCanvasRef && this.rawPdfOriginalBytes) {
       this.canvasListoParaRender = false;
       this.renderizarPaginaManual();
     }
@@ -111,7 +116,6 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   ngOnDestroy(): void {
-    this.limpiarUrls();
     this.pdfDocJsInstance = null;
   }
 
@@ -167,20 +171,12 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       const buffer = await file.arrayBuffer();
       this.rawPdfOriginalBytes = buffer;
 
-      // Crear URL para el visor original
-      this.pdfOriginalBlob = new Blob([buffer], { type: 'application/pdf' });
-      const origUrl = URL.createObjectURL(this.pdfOriginalBlob);
-      this.objectUrlsToRevoke.push(origUrl);
-      this.pdfOriginalUrl = this.sanitizer.bypassSecurityTrustResourceUrl(origUrl);
-
-      // Cargar instancia de PDF.js para renderizar páginas en modo manual
+      // Cargar instancia de PDF.js para renderizar páginas
       const dataParaJs = new Uint8Array(buffer.slice(0));
       this.pdfDocJsInstance = await pdfjsLib.getDocument({ data: dataParaJs }).promise;
       this.totalPaginasManual = this.pdfDocJsInstance.numPages;
       this.paginaActualManual = 1;
 
-      // Activar vista manual por defecto para permitir dibujar inmediatamente
-      this.vistaVisor = 'manual';
       this.canvasListoParaRender = true;
 
       // Analizar documento para extraer sujetos pasando una copia del buffer
@@ -225,6 +221,8 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       }
 
       this.analisisCompletado = true;
+      // Actualizar las cajas rojas sobre el documento
+      this.actualizarCajasVisiblesPagina();
     } catch (err: any) {
       console.error('Error al procesar el archivo PDF:', err);
       alert('Ocurrió un error al analizar el PDF: ' + (err?.message || err));
@@ -234,15 +232,8 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   // =========================================================================
-  // NAVEGACIÓN Y RENDERIZADO DEL VISOR MANUAL (CANVAS)
+  // NAVEGACIÓN Y RENDERIZADO DEL VISOR (CANVAS)
   // =========================================================================
-  cambiarVistaVisor(vista: 'manual' | 'original' | 'censurado'): void {
-    this.vistaVisor = vista;
-    if (vista === 'manual') {
-      this.canvasListoParaRender = true;
-    }
-  }
-
   async renderizarPaginaManual(): Promise<void> {
     if (!this.rawPdfOriginalBytes || !this.pdfCanvasRef) return;
     this.renderizandoPaginaManual = true;
@@ -277,11 +268,128 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       };
 
       await page.render(renderContext).promise;
+
+      // Calcular cajas rojas a censurar en esta página
+      await this.actualizarCajasVisiblesPagina();
     } catch (err) {
       console.error('Error renderizando página manual en canvas:', err);
     } finally {
       this.renderizandoPaginaManual = false;
     }
+  }
+
+  /**
+   * Identifica los recuadros rojos translúcidos en la página activa
+   */
+  async actualizarCajasVisiblesPagina(): Promise<void> {
+    const cajas: CajaCensuraVisual[] = [];
+
+    // 1. Recuadros manuales dibujados para la página activa
+    const manualesPagina = this.recuadrosManuales.filter(r => r.pagina === this.paginaActualManual);
+    for (const m of manualesPagina) {
+      if (m.pantalla) {
+        cajas.push({
+          id: m.id,
+          tipo: 'manual',
+          recuadroManualId: m.id,
+          etiqueta: m.descripcion || 'Área Manual',
+          xPct: m.pantalla.xPct,
+          yPct: m.pantalla.yPct,
+          wPct: m.pantalla.wPct,
+          hPct: m.pantalla.hPct
+        });
+      }
+    }
+
+    // 2. Coincidencias de texto de sujetos seleccionados en la página activa
+    if (this.pdfDocJsInstance && this.anchoCanvasActual > 0) {
+      try {
+        const page = await this.pdfDocJsInstance.getPage(this.paginaActualManual);
+        const viewport = page.getViewport({ scale: this.escalaManual });
+        const textContent = await page.getTextContent();
+
+        const terminosValidos = this.sujetos
+          .filter(s => s.seleccionado && s.valor && s.valor.trim().length > 1)
+          .map(s => {
+            const variantes = new Set<string>();
+            variantes.add(s.valor.trim());
+            if (s.variantes) {
+              s.variantes.forEach(v => variantes.add(v.trim()));
+            }
+            return {
+              sujeto: s,
+              variantesNorm: Array.from(variantes).map(v => this.normalizarTexto(v))
+            };
+          });
+
+        if (terminosValidos.length > 0) {
+          for (const item of textContent.items as any[]) {
+            if (!item.str || !item.transform) continue;
+            const strNorm = this.normalizarTexto(item.str);
+            if (!strNorm) continue;
+
+            for (const t of terminosValidos) {
+              const coincide = t.variantesNorm.some(v => strNorm.includes(v) || (v.length > 4 && v.includes(strNorm)));
+              if (coincide) {
+                const tx = item.transform[4];
+                const ty = item.transform[5];
+                const fontH = Math.hypot(item.transform[0], item.transform[1]) || item.height || 12;
+                const fontW = item.width || (item.str.length * fontH * 0.5);
+
+                const [x1, y1] = viewport.convertToViewportPoint(tx, ty + fontH);
+                const [x2, y2] = viewport.convertToViewportPoint(tx + fontW, ty);
+
+                const left = Math.min(x1, x2) - 2;
+                const top = Math.min(y1, y2) - 2;
+                const width = Math.abs(x2 - x1) + 4;
+                const height = Math.abs(y2 - y1) + 4;
+
+                const xPct = Math.max(0, (left / viewport.width) * 100);
+                const yPct = Math.max(0, (top / viewport.height) * 100);
+                const wPct = Math.min(100 - xPct, (width / viewport.width) * 100);
+                const hPct = Math.min(100 - yPct, (height / viewport.height) * 100);
+
+                cajas.push({
+                  id: 'box_' + Math.random().toString(36).substring(2, 9),
+                  tipo: 'sujeto',
+                  sujetoId: t.sujeto.id,
+                  etiqueta: t.sujeto.campo || t.sujeto.categoria,
+                  valorTexto: item.str,
+                  xPct,
+                  yPct,
+                  wPct,
+                  hPct
+                });
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error calculando coincidencias en página:', err);
+      }
+    }
+
+    this.cajasVisiblesPagina = cajas;
+  }
+
+  /**
+   * Al hacer clic en el 'X' de un recuadro rojo en el visor
+   */
+  quitarCensuraDeCaja(caja: CajaCensuraVisual, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (caja.tipo === 'sujeto' && caja.sujetoId) {
+      const sujeto = this.sujetos.find(s => s.id === caja.sujetoId);
+      if (sujeto) {
+        sujeto.seleccionado = false;
+      }
+    } else if (caja.tipo === 'manual' && caja.recuadroManualId) {
+      this.eliminarRecuadroManual(caja.recuadroManualId);
+    }
+
+    this.actualizarCajasVisiblesPagina();
   }
 
   irAPaginaManual(num: number): void {
@@ -383,13 +491,10 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       };
 
       this.recuadrosManuales.push(nuevoRecuadro);
+      this.actualizarCajasVisiblesPagina();
     }
 
     this.cajaTemporal = null;
-  }
-
-  get recuadrosPaginaActual(): RecuadroManualCensura[] {
-    return this.recuadrosManuales.filter(r => r.pagina === this.paginaActualManual);
   }
 
   eliminarRecuadroManual(id: string, event?: Event): void {
@@ -399,21 +504,25 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
     const idx = this.recuadrosManuales.findIndex(r => r.id === id);
     if (idx !== -1) {
       this.recuadrosManuales.splice(idx, 1);
+      this.actualizarCajasVisiblesPagina();
     }
   }
 
   deshacerUltimoRecuadro(): void {
     if (this.recuadrosManuales.length > 0) {
       this.recuadrosManuales.pop();
+      this.actualizarCajasVisiblesPagina();
     }
   }
 
   limpiarRecuadrosPaginaActual(): void {
     this.recuadrosManuales = this.recuadrosManuales.filter(r => r.pagina !== this.paginaActualManual);
+    this.actualizarCajasVisiblesPagina();
   }
 
   limpiarTodosLosRecuadrosManuales(): void {
     this.recuadrosManuales = [];
+    this.actualizarCajasVisiblesPagina();
   }
 
   // =========================================================================
@@ -429,6 +538,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
   seleccionarTodos(valor: boolean): void {
     this.sujetos.forEach(s => (s.seleccionado = valor));
+    this.actualizarCajasVisiblesPagina();
   }
 
   seleccionarPorGrupo(tipo: 'sujetos' | 'personales', valor: boolean): void {
@@ -439,6 +549,11 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
         s.seleccionado = valor;
       }
     });
+    this.actualizarCajasVisiblesPagina();
+  }
+
+  onToggleSujeto(): void {
+    this.actualizarCajasVisiblesPagina();
   }
 
   get cantidadSeleccionados(): number {
@@ -453,6 +568,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
     const idx = this.sujetos.findIndex(s => s.id === id);
     if (idx !== -1) {
       this.sujetos.splice(idx, 1);
+      this.actualizarCajasVisiblesPagina();
     }
   }
 
@@ -476,24 +592,25 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
     });
 
     this.nuevoTextoManual = '';
+    this.actualizarCajasVisiblesPagina();
   }
 
   // =========================================================================
-  // APLICAR CENSURA AL DOCUMENTO
+  // BOTÓN FINAL: CENSURAR Y DESCARGAR
   // =========================================================================
-  async aplicarCensura(): Promise<void> {
+  async censurarYDescargar(): Promise<void> {
     if (!this.archivoCargado && !this.rawPdfOriginalBytes) return;
 
     const seleccionados = this.sujetos.filter(s => s.seleccionado);
     if (seleccionados.length === 0 && this.recuadrosManuales.length === 0) {
-      alert('Por favor selecciona al menos un dato o dibuja un recuadro de censura manual.');
+      alert('Por favor selecciona al menos un dato o dibuja un área en el documento para censurar.');
       return;
     }
 
     try {
       this.censurando = true;
 
-      // Obtener siempre un buffer fresco o clonado para evitar "detached ArrayBuffer"
+      // Buffer fresco o clonado
       const bytesOriginales = this.archivoCargado
         ? await this.archivoCargado.arrayBuffer()
         : this.rawPdfOriginalBytes!.slice(0);
@@ -512,43 +629,23 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
       this.totalCensurados = res.totalCoincidencias;
       this.censuraAplicada = true;
 
-      // Crear URL para el visor censurado
-      this.pdfCensuradoBlob = new Blob([res.pdfBytes], { type: 'application/pdf' });
-      const censUrl = URL.createObjectURL(this.pdfCensuradoBlob);
-      this.objectUrlsToRevoke.push(censUrl);
-      this.pdfCensuradoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(censUrl);
-
-      // Cambiar automáticamente la vista del visor a "censurado"
-      this.vistaVisor = 'censurado';
+      // Descarga automática inmediata del PDF con cajas negras permanentes
+      const blob = new Blob([res.pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const baseName = this.nombreArchivo.replace(/\.pdf$/i, '');
+      a.download = `${baseName}_CENSURADO.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
     } catch (err: any) {
-      console.error('Error al censurar el PDF:', err);
+      console.error('Error al censurar y descargar el PDF:', err);
       alert('Ocurrió un error al aplicar la censura en el documento: ' + (err?.message || err));
     } finally {
       this.censurando = false;
     }
-  }
-
-  descargarPdfCensurado(): void {
-    if (!this.rawPdfCensuradoBytes) return;
-
-    const blob = new Blob([this.rawPdfCensuradoBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const baseName = this.nombreArchivo.replace(/\.pdf$/i, '');
-    a.download = `${baseName}_CENSURADO.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-
-  abrirEnNuevaVentana(): void {
-    const blob = this.vistaVisor === 'censurado' ? this.pdfCensuradoBlob : this.pdfOriginalBlob;
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   restablecer(): void {
@@ -556,13 +653,13 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   private limpiarEstado(): void {
-    this.limpiarUrls();
     this.archivoCargado = null;
     this.nombreArchivo = '';
     this.tamanoArchivo = '';
     this.numPaginas = 0;
     this.sujetos = [];
     this.recuadrosManuales = [];
+    this.cajasVisiblesPagina = [];
     this.paginaActualManual = 1;
     this.totalPaginasManual = 1;
     this.pdfDocJsInstance = null;
@@ -571,22 +668,18 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
     this.censurando = false;
     this.censuraAplicada = false;
     this.totalCensurados = 0;
-    this.pdfOriginalUrl = null;
-    this.pdfCensuradoUrl = null;
-    this.pdfOriginalBlob = null;
-    this.pdfCensuradoBlob = null;
     this.rawPdfOriginalBytes = null;
     this.rawPdfCensuradoBytes = null;
-    this.vistaVisor = 'manual';
     this.cajaTemporal = null;
   }
 
-  private limpiarUrls(): void {
-    this.objectUrlsToRevoke.forEach(url => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (e) {}
-    });
-    this.objectUrlsToRevoke = [];
+  private normalizarTexto(txt: string): string {
+    return (txt || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }
