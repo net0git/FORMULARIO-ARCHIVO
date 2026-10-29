@@ -37,8 +37,8 @@ export class AtencionSolicitudesComponent implements OnInit {
   usuarioActual: UsuarioSistema | null = null;
   sidebarColapsado = false;
   menuArchivoAbierto = true;
-  menuHerramientasAbierto = true;
-  menuConfiguracionAbierto = true;
+  menuHerramientasAbierto = false;
+  menuConfiguracionAbierto = false;
   vistaActiva: 'solicitudes' | 'personal' | 'censurar-pdf' = 'solicitudes';
   cortes = CORTES_SUPERIORES;
 
@@ -168,6 +168,10 @@ export class AtencionSolicitudesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.menuArchivoAbierto = true;
+    this.menuHerramientasAbierto = false;
+    this.menuConfiguracionAbierto = false;
+
     this.usuarioActual = this.archivoService.obtenerUsuarioSesion();
     if (!this.usuarioActual) {
       this.router.navigate(['/login']);
