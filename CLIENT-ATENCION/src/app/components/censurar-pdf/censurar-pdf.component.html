@@ -2,8 +2,7 @@
   <!-- ======================================================================= -->
   <!-- COLUMNA IZQUIERDA: PANEL DE CONTROL Y ANÁLISIS                          -->
   <!-- ======================================================================= -->
-  <div class="censura-col-control-wrapper">
-    <div class="censura-col-control">
+  <div class="censura-col-control">
     <div class="control-header">
       <div class="header-icon">
         <i class="fa-solid fa-user-shield"></i>
@@ -334,23 +333,21 @@
       </div>
 
       
+            <!-- 4. BOTÓN DE ACCIÓN: CENSURAR Y DESCARGAR -->
+      <div class="action-btn-area">
+        <button
+          type="button"
+          class="btn-apply-censura"
+          [disabled]="censurando || totalElementosACensurar === 0"
+          (click)="censurarYDescargar()"
+        >
+          <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
+          <i class="fa-solid fa-download" *ngIf="!censurando"></i>
+          <span>
+            {{ censurando ? 'Censurando y descargando PDF...' : ('Censurar y Descargar (' + totalElementosACensurar + ')') }}
+          </span>
+        </button>
       </div>
-        </div>
-
-    <!-- 4. BOTÓN DE ACCIÓN: CENSURAR Y DESCARGAR (FUERA DEL CARD LATERAL) -->
-    <div class="action-btn-area-outside" *ngIf="analisisCompletado && !analizando">
-      <button
-        type="button"
-        class="btn-apply-censura-outside"
-        [disabled]="censurando || totalElementosACensurar === 0"
-        (click)="censurarYDescargar()"
-      >
-        <i class="fa-solid fa-spinner fa-spin" *ngIf="censurando"></i>
-        <i class="fa-solid fa-download" *ngIf="!censurando"></i>
-        <span>
-          {{ censurando ? 'Censurando y descargando PDF...' : ('Censurar y Descargar (' + totalElementosACensurar + ')') }}
-        </span>
-      </button>
     </div>
   </div>
 
