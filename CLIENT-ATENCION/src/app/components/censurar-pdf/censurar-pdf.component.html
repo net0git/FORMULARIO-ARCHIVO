@@ -361,7 +361,7 @@
         <i class="fa-solid fa-file-pdf"></i>
         <span class="visor-file-title" [title]="nombreArchivo">{{ nombreArchivo }}</span>
         <span class="badge-campos-count" title="Campos a censurar en la página visible">
-          {{ cajasVisiblesPagina.length }} en esta pág.
+          {{ cajasVisiblesPagina.length }}
         </span>
       </div>
 
@@ -440,11 +440,11 @@
           </button>
           <button
             type="button"
-            class="btn-tool-action text-danger"
+            class="btn-tool-action"
             (click)="limpiarRecuadrosPaginaActual()"
             title="Limpiar recuadros dibujados en esta página"
           >
-            <i class="fa-regular fa-trash-can"></i> Limpiar pág.
+            <i class="fa-solid fa-paintbrush"></i>
           </button>
         </div>
       </div>
@@ -462,14 +462,6 @@
           <span>Censurar y Descargar ({{ totalElementosACensurar }})</span>
         </button>
       </div>
-    </div>
-
-    <!-- Barra de sugerencia e instrucción -->
-    <div class="interactive-hint-bar" *ngIf="archivoCargado">
-      <i class="fa-solid fa-circle-info"></i>
-      <span>
-        Los campos con <strong>recuadro rojo translúcido</strong> se censurarán. Clic en <strong>✕</strong> para excluir, o <strong>arrastra el ratón</strong> para censurar un área manual.
-      </span>
     </div>
 
     <!-- Contenedor del Documento -->
