@@ -33,9 +33,32 @@ export interface RespuestaIaExpediente {
   providedIn: 'root'
 })
 export class IaExpedienteService {
-  // URL base de Ollama (configurable a localhost o IP del servidor de red)
+  // URL base de Ollama (se autodetecta según la IP/host del servidor o se puede fijar manualmente aquí)
   private ollamaUrl = 'http://localhost:11434';
   private modeloPorDefecto = 'llama3.2:3b';
+
+  constructor() {
+    this.inicializarUrlOllama();
+  }
+
+  /**
+   * Inicializa la URL de Ollama automáticamente con la IP/host actual del navegador
+   */
+  private inicializarUrlOllama(): void {
+    if (typeof window !== 'undefined') {
+      const guardada = localStorage.getItem('ollama_url');
+      if (guardada) {
+        this.ollamaUrl = guardada.replace(/\/+$/, '');
+        return;
+      }
+      // Detección automática: si la página se abre desde http://10.66.88.160:4050,
+      // conecta automáticamente a http://10.66.88.160:11434
+      const host = window.location.hostname;
+      if (host) {
+        this.ollamaUrl = `http://${host}:11434`;
+      }
+    }
+  }
 
   get urlServidor(): string {
     return this.ollamaUrl;
@@ -43,6 +66,9 @@ export class IaExpedienteService {
 
   set urlServidor(url: string) {
     this.ollamaUrl = url ? url.replace(/\/+$/, '') : 'http://localhost:11434';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ollama_url', this.ollamaUrl);
+    }
   }
 
   /**
