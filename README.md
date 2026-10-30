@@ -87,6 +87,11 @@ FORMULARIO-ARCHIVO/
 │   ├── package.json
 │   └── angular.json
 │
+├── GOOGLE-SHEET/               # Backend en Google Apps Script y manuales de referencia
+│   ├── google-apps-script/
+│   │   └── Code.gs             # Código del backend web para Apps Script
+│   └── manual.pdf              # Manual de usuario del sistema de archivo
+│
 ├── .gitignore
 ├── GEMINI.md
 └── README.md
