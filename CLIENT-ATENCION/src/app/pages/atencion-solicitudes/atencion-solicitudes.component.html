@@ -1107,20 +1107,10 @@
                   <div class="parte-item" *ngFor="let p of item.partes.slice(0, 2)">
                     <small class="parte-rol">{{ p.tipo_parte }}:</small>
                     <span class="parte-nombre">{{ p.nombre_parte }}</span>
-                    <!-- Etiqueta quipuscan debajo de demandado -->
-                    <div class="etiqueta-quipuscan-box" *ngIf="esParteDemandado(p.tipo_parte) && tieneQuipuscan(item)">
-                      <button
-                        type="button"
-                        class="tag-quipuscan tag-quipuscan-btn"
-                        (click)="abrirModalQuipuscan(item, $event)"
-                        [title]="'Quipuscan: ' + (obtenerQuipuscan(item)?.serie_doc || 'Expediente digitalizado') + ' - Clic para ver portada y detalles'"
-                      >
-                        <i class="fa-solid fa-cube"></i> quipuscan
-                      </button>
-                    </div>
                   </div>
-                  <!-- Si el demandado no estaba en las 2 primeras partes pero el expediente tiene quipuscan -->
-                  <div class="etiqueta-quipuscan-box" *ngIf="!tieneParteDemandado(item.partes.slice(0, 2)) && tieneQuipuscan(item)">
+                  <small *ngIf="item.partes.length > 2" class="partes-mas">+{{ item.partes.length - 2 }} partes más...</small>
+                  <!-- Botón quipuscan debajo de '+1 partes más...' -->
+                  <div class="etiqueta-quipuscan-box" *ngIf="tieneQuipuscan(item)">
                     <button
                       type="button"
                       class="tag-quipuscan tag-quipuscan-btn"
@@ -1130,7 +1120,6 @@
                       <i class="fa-solid fa-cube"></i> quipuscan
                     </button>
                   </div>
-                  <small *ngIf="item.partes.length > 2" class="partes-mas">+{{ item.partes.length - 2 }} partes más...</small>
                 </div>
                 <!-- Si no tiene partes pero tiene quipuscan -->
                 <div class="etiqueta-quipuscan-box" *ngIf="(!item.partes || item.partes.length === 0) && tieneQuipuscan(item)" style="margin: 4px 0 0 10px;">
@@ -1168,8 +1157,8 @@
         </div>
       </div>
 
-      <!-- Detalle emergente/expandido si selecciona 'Detalle' (solo si NO está asociado a Quipuscan) -->
-      <div class="expediente-detalle-completo" *ngIf="expedienteSeleccionadoDetalle && !tieneQuipuscanUbicacionActual()">
+      <!-- Detalle emergente/expandido si selecciona 'Detalle' -->
+      <div class="expediente-detalle-completo" *ngIf="expedienteSeleccionadoDetalle">
         <div class="detalle-header">
           <h4><i class="fa-solid fa-file-invoice"></i> Detalle del Expediente Seleccionado</h4>
           <button type="button" class="btn-cerrar-mini" (click)="expedienteSeleccionadoDetalle = null">&times;</button>

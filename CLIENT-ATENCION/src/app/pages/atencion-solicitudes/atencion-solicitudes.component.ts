@@ -818,7 +818,17 @@ export class AtencionSolicitudesComponent implements OnInit {
   }
 
   verDetalleExpediente(item: ExpedienteArchivoCentral): void {
-    this.expedienteSeleccionadoDetalle = item;
+    if (this.expedienteSeleccionadoDetalle === item) {
+      this.expedienteSeleccionadoDetalle = null;
+    } else {
+      this.expedienteSeleccionadoDetalle = item;
+      setTimeout(() => {
+        const el = document.querySelector('.expediente-detalle-completo');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
+    }
   }
 
   async guardarUbicacionExpediente(): Promise<void> {
