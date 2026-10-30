@@ -18,3 +18,6 @@ Thumbs.db
 
 # URL privada del Apps Script (no subir)
 **/public/config.json
+
+# Documentación interna / planes privados
+PLAN/
