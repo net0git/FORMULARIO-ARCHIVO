@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
+import html2canvas from 'html2canvas';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DocumentoAdjunto, SolicitudArchivo } from '../../models/archivo.models';
@@ -122,8 +123,8 @@ import { PDFDocument } from 'pdf-lib';
         </div>
 
         <!-- MODO 2: CONSTANCIA DE SOLICITUD A4 + TODA LA DOCUMENTACIÓN DE EVENTOS -->
-        <div class="pdf-canvas-bg stacked-pages" *ngIf="!documento && solicitud && !modoDocs">
-          <div class="pdf-a4-page" id="constancia-print-area">
+        <div class="pdf-canvas-bg stacked-pages" [class.offscreen-capture]="documento || modoDocs" *ngIf="solicitud">
+          <div class="pdf-a4-page" #constanciaPrintArea id="constancia-print-area">
             <div class="a4-header">
               <div class="pj-brand">
                 <div class="pj-emblem-grid">
@@ -399,6 +400,17 @@ import { PDFDocument } from 'pdf-lib';
       justify-content: center;
       background: #525659;
     }
+    .pdf-canvas-bg.offscreen-capture {
+      position: fixed !important;
+      left: -9999px !important;
+      top: 0 !important;
+      width: 210mm !important;
+      height: auto !important;
+      overflow: visible !important;
+      opacity: 1 !important;
+      pointer-events: none !important;
+      z-index: -100 !important;
+    }
     .pdf-canvas-bg.embed-mode {
       padding: 0;
       overflow: hidden;
@@ -655,6 +667,7 @@ import { PDFDocument } from 'pdf-lib';
   `]
 })
 export class PdfViewerModalComponent implements OnChanges {
+  @ViewChild('constanciaPrintArea') constanciaPrintArea?: ElementRef<HTMLElement>;
   @Input() solicitud: SolicitudArchivo | null = null;
   @Input() documento: DocumentoAdjunto | null = null;
   /** Si es true, une todos los documentos (DOC) de eventos en un solo PDF y lo muestra. */
@@ -761,11 +774,17 @@ export class PdfViewerModalComponent implements OnChanges {
       let paginasAgregadas = 0;
 
       if (incluirConstancia) {
-        const bytesConstancia = new Uint8Array(this.pdfService.generarDocumentoPdf(sol).output('arraybuffer'));
-        const srcC = await PDFDocument.load(bytesConstancia);
-        const pagsC = await pdfFinal.copyPages(srcC, srcC.getPageIndices());
-        pagsC.forEach((p) => pdfFinal.addPage(p));
-        paginasAgregadas += pagsC.length;
+        try {
+          const pagsHtml = await this.agregarConstanciaHtmlAlPdf(pdfFinal);
+          paginasAgregadas += pagsHtml;
+        } catch (errHtml) {
+          console.warn('html2canvas no pudo renderizar la constancia, usando generador jsPDF de respaldo:', errHtml);
+          const bytesConstancia = new Uint8Array(this.pdfService.generarDocumentoPdf(sol).output('arraybuffer'));
+          const srcC = await PDFDocument.load(bytesConstancia);
+          const pagsC = await pdfFinal.copyPages(srcC, srcC.getPageIndices());
+          pagsC.forEach((p) => pdfFinal.addPage(p));
+          paginasAgregadas += pagsC.length;
+        }
       }
 
       for (const d of docs) {
@@ -826,6 +845,79 @@ export class PdfViewerModalComponent implements OnChanges {
     } finally {
       this.cargandoUnion = false;
     }
+  }
+
+  
+  /**
+   * Captura la plantilla HTML/CSS exacta de la constancia A4 mediante html2canvas
+   * y la inserta como páginas A4 en el documento PDF unificado.
+   */
+  private async agregarConstanciaHtmlAlPdf(pdfFinal: PDFDocument): Promise<number> {
+    // Breve pausa para asegurar renderizado de fuentes y estilos en el DOM
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    let elem = this.constanciaPrintArea?.nativeElement;
+    if (!elem) {
+      elem = document.getElementById('constancia-print-area') as HTMLElement;
+    }
+    if (!elem) {
+      throw new Error('Elemento constancia-print-area no encontrado en el DOM');
+    }
+
+    const canvas = await html2canvas(elem, {
+      scale: 2, // 2x para nitidez cristalina en impresión y visualización
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
+
+    const pageW = 595.28; // Ancho A4 en puntos PDF
+    const pageH = 841.89; // Alto A4 en puntos PDF
+    const a4Ratio = pageH / pageW;
+    const pageHeightPx = canvas.width * a4Ratio;
+
+    const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+    let pagsAnadidas = 0;
+
+    for (let i = 0; i < totalPages; i++) {
+      const sliceHeight = Math.min(pageHeightPx, canvas.height - i * pageHeightPx);
+      if (sliceHeight <= 0) break;
+
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = pageHeightPx;
+      const pctx = pageCanvas.getContext('2d');
+      if (pctx) {
+        pctx.fillStyle = '#ffffff';
+        pctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pctx.drawImage(
+          canvas,
+          0,
+          i * pageHeightPx,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          pageCanvas.width,
+          sliceHeight
+        );
+
+        const dataUrl = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const raw = dataUrl.split(',')[1];
+        const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+        const imgEmbed = await pdfFinal.embedJpg(bytes);
+        const page = pdfFinal.addPage([pageW, pageH]);
+        page.drawImage(imgEmbed, {
+          x: 0,
+          y: 0,
+          width: pageW,
+          height: pageH
+        });
+        pagsAnadidas++;
+      }
+    }
+
+    return pagsAnadidas;
   }
 
   private agregarImagenComoPagina(pdf: PDFDocument, img: { width: number; height: number }): void {
