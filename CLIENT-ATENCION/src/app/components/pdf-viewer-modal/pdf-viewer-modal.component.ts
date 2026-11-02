@@ -92,7 +92,7 @@ import { PDFDocument } from 'pdf-lib';
 
         <div class="pdf-email-banner ok" *ngIf="modoDocs && cargandoUnion">
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <span>Uniendo documentos (DOC) de eventos en un solo PDF...</span>
+          <span>Uniendo documentos de DOC (SOLICITUD / Eventos Realizados)...</span>
         </div>
         <div class="pdf-email-banner err" *ngIf="modoDocs && errorUnion">
           <i class="fa-solid fa-triangle-exclamation"></i>
@@ -726,11 +726,24 @@ export class PdfViewerModalComponent implements OnChanges {
     this.recursoAdjuntoUrl = null;
 
     try {
-      // El DOC del evento REGISTRO DE SOLICITUD es la constancia (se genera); los demás son adjuntos.
+      // Función para detectar si un evento corresponde al registro inicial de la solicitud
+      const esEventoRegistro = (ev: { accion?: string }) => {
+        const accion = (ev.accion || '').trim().toUpperCase();
+        return accion === 'REGISTRO DE SOLICITUD' || accion.includes('REGISTRO DE SOLICITUD');
+      };
+
+      // Excluimos el evento 'REGISTRO DE SOLICITUD' de los adjuntos secundarios para no duplicar la constancia
       const docs: DocumentoAdjunto[] = (sol.eventos || [])
-        .filter((ev) => ev.documento)
-        .map((ev) => ev.documento as DocumentoAdjunto);
-      const incluirConstancia = (sol.eventos || []).some((ev) => ev.accion === 'REGISTRO DE SOLICITUD') || docs.length === 0;
+        .filter((ev) => ev.documento && !esEventoRegistro(ev))
+        .map((ev) => ev.documento as DocumentoAdjunto)
+        .filter((d) => {
+          const nombre = (d.nombreArchivo || '').toUpperCase();
+          const desc = (d.descripcion || '').toUpperCase();
+          return !nombre.includes('CONSTANCIA_SOLICITUD') && !desc.includes('CONSTANCIA DE SOLICITUD');
+        });
+
+      // La SOLICITUD siempre se incluye una sola vez como la primera parte
+      const incluirConstancia = true;
 
 
       // IDs de Drive de los documentos que no traen contenido local
@@ -800,8 +813,8 @@ export class PdfViewerModalComponent implements OnChanges {
       const base64 = await pdfFinal.saveAsBase64({ dataUri: true });
       const pseudoDoc: DocumentoAdjunto = {
         id: 0,
-        nombreArchivo: 'DOCUMENTOS_EVENTOS_SOL_' + sol.nroSolicitud + '.pdf',
-        descripcion: 'Documentos de eventos unidos',
+        nombreArchivo: 'DOCUMENTOS_SOLICITUD_EVENTOS_' + sol.nroSolicitud + '.pdf',
+        descripcion: 'DOC (SOLICITUD / Eventos Realizados) - Sol. N° ' + sol.nroSolicitud,
         tipo: 'OTRO',
         mimeType: 'application/pdf',
         base64Data: base64
