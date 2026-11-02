@@ -1137,14 +1137,6 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.mostrarModalPdf = true;
   }
 
-  // Abre el visor con todos los documentos (DOC) de los eventos unidos en un solo PDF
-  abrirDocsEventosPdf(sol: SolicitudArchivo): void {
-    this.solicitudActiva = sol;
-    this.documentoVisorActivo = null;
-    this.modoDocsEventos = false;
-    this.mostrarModalPdf = true;
-  }
-
   // =========================================================================
   // ACCIÓN 7: UNIÓN DE TODOS LOS DOCUMENTOS DE DOC (EVENTOS REALIZADOS) EN UN SOLO PDF
   // =========================================================================
