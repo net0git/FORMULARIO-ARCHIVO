@@ -929,9 +929,10 @@ export class PdfViewerModalComponent implements OnChanges {
       }
     }
 
-    if (doc.url) {
-      let previewUrl = doc.url;
-      const matchDrive = doc.url.match(/\/file\/d\/([^/]+)/);
+    const docUrl = doc.url || (doc as any).downloadUrl || '';
+    if (docUrl) {
+      let previewUrl = docUrl;
+      const matchDrive = docUrl.match(/\/file\/d\/([^/]+)/);
       if (matchDrive && matchDrive[1]) {
         previewUrl = `https://drive.google.com/file/d/${matchDrive[1]}/preview`;
       }

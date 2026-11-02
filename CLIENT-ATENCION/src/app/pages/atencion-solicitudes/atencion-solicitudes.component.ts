@@ -1141,7 +1141,7 @@ export class AtencionSolicitudesComponent implements OnInit {
   abrirDocsEventosPdf(sol: SolicitudArchivo): void {
     this.solicitudActiva = sol;
     this.documentoVisorActivo = null;
-    this.modoDocsEventos = true;
+    this.modoDocsEventos = false;
     this.mostrarModalPdf = true;
   }
 
