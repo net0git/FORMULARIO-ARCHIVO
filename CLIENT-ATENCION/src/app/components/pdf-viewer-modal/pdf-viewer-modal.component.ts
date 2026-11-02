@@ -411,6 +411,14 @@ import { PDFDocument } from 'pdf-lib';
       pointer-events: none !important;
       z-index: -100 !important;
     }
+    .pdf-canvas-bg.offscreen-capture .pdf-a4-page {
+      margin: 0 !important;
+      box-shadow: none !important;
+      height: 297mm !important;
+      min-height: 297mm !important;
+      max-height: 297mm !important;
+      overflow: hidden !important;
+    }
     .pdf-canvas-bg.embed-mode {
       padding: 0;
       overflow: hidden;
@@ -876,13 +884,36 @@ export class PdfViewerModalComponent implements OnChanges {
     const a4Ratio = pageH / pageW;
     const pageHeightPx = canvas.width * a4Ratio;
 
-    const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+    // Umbral mínimo de tolerancia para evitar hojas extra por desbordes de margen (12% de la altura A4)
+    const umbralMargenPx = pageHeightPx * 0.12;
+
+    // Si la altura del canvas está dentro del rango normal de una hoja A4, es exactamente 1 sola página
+    if (canvas.height <= pageHeightPx + umbralMargenPx) {
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const raw = dataUrl.split(',')[1];
+      const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+      const imgEmbed = await pdfFinal.embedJpg(bytes);
+      const page = pdfFinal.addPage([pageW, pageH]);
+      page.drawImage(imgEmbed, {
+        x: 0,
+        y: 0,
+        width: pageW,
+        height: pageH
+      });
+      return 1;
+    }
+
+    // En caso excepcional de contenido extenso, paginar controlando que no se creen hojas en blanco
     let pagsAnadidas = 0;
+    let yOffset = 0;
 
-    for (let i = 0; i < totalPages; i++) {
-      const sliceHeight = Math.min(pageHeightPx, canvas.height - i * pageHeightPx);
-      if (sliceHeight <= 0) break;
+    while (yOffset < canvas.height) {
+      const restante = canvas.height - yOffset;
+      if (pagsAnadidas > 0 && restante < umbralMargenPx) {
+        break; // Omitir hoja residual vacía
+      }
 
+      const sliceHeight = Math.min(pageHeightPx, restante);
       const pageCanvas = document.createElement('canvas');
       pageCanvas.width = canvas.width;
       pageCanvas.height = pageHeightPx;
@@ -893,7 +924,7 @@ export class PdfViewerModalComponent implements OnChanges {
         pctx.drawImage(
           canvas,
           0,
-          i * pageHeightPx,
+          yOffset,
           canvas.width,
           sliceHeight,
           0,
@@ -915,6 +946,8 @@ export class PdfViewerModalComponent implements OnChanges {
         });
         pagsAnadidas++;
       }
+
+      yOffset += pageHeightPx;
     }
 
     return pagsAnadidas;
