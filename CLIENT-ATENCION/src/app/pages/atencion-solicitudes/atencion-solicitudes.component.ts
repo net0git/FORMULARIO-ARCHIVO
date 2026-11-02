@@ -1146,6 +1146,16 @@ export class AtencionSolicitudesComponent implements OnInit {
   }
 
   // =========================================================================
+  // ACCIÓN 7: UNIÓN DE TODOS LOS DOCUMENTOS DE DOC (EVENTOS REALIZADOS) EN UN SOLO PDF
+  // =========================================================================
+  abrirUnionDocsEventosPdf(sol: SolicitudArchivo): void {
+    this.solicitudActiva = sol;
+    this.documentoVisorActivo = null;
+    this.modoDocsEventos = true;
+    this.mostrarModalPdf = true;
+  }
+
+  // =========================================================================
   // UTILIDADES Y SESIÓN
   // =========================================================================
   mostrarAlertaVerde(mensaje: string): void {

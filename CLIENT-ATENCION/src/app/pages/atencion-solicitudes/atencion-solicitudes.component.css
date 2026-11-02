@@ -1642,3 +1642,7 @@
   color: #10b981;
   font-size: 0.95rem;
 }
+
+.btn-row-action.btn-union-docs:hover {
+  background: #1d72b8;
+}
