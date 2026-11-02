@@ -75,7 +75,7 @@ export interface ResultadoAnalisisPdf {
 export class PdfCensuraService {
   constructor() {
     if (typeof window !== 'undefined' && !(pdfjsLib as any).GlobalWorkerOptions.workerSrc) {
-      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjsLib as any).version || '3.11.174'}/pdf.worker.min.js`;
+      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.js';
     }
   }
 
@@ -90,7 +90,7 @@ export class PdfCensuraService {
     onProgreso?.('Cargando documento PDF...', 15);
     // Clonar el buffer para evitar que PDF.js lo desmonte (detached ArrayBuffer)
     const dataParaPdfJs = new Uint8Array(pdfBytes.slice(0));
-    const doc = await pdfjsLib.getDocument({ data: dataParaPdfJs }).promise;
+    const doc = await pdfjsLib.getDocument({ data: dataParaPdfJs, standardFontDataUrl: 'assets/pdfjs/standard_fonts/' }).promise;
     const numPaginas = doc.numPages;
 
     let textoTotal = '';
@@ -744,7 +744,7 @@ export class PdfCensuraService {
     const bytesParaPdfJs = new Uint8Array(pdfOriginalBytes.slice(0));
     const bytesParaPdfLib = new Uint8Array(pdfOriginalBytes.slice(0));
 
-    const docPdfJs = await pdfjsLib.getDocument({ data: bytesParaPdfJs }).promise;
+    const docPdfJs = await pdfjsLib.getDocument({ data: bytesParaPdfJs, standardFontDataUrl: 'assets/pdfjs/standard_fonts/' }).promise;
     const pdfLibDoc = await PDFDocument.load(bytesParaPdfLib);
     const numPaginas = docPdfJs.numPages;
 

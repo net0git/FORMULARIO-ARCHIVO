@@ -176,7 +176,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
       // Cargar instancia de PDF.js para renderizar páginas
       const dataParaJs = new Uint8Array(buffer.slice(0));
-      this.pdfDocJsInstance = await pdfjsLib.getDocument({ data: dataParaJs }).promise;
+      this.pdfDocJsInstance = await pdfjsLib.getDocument({ data: dataParaJs, standardFontDataUrl: 'assets/pdfjs/standard_fonts/' }).promise;
       this.totalPaginasManual = this.pdfDocJsInstance.numPages;
       this.paginaActualManual = 1;
 
@@ -261,7 +261,7 @@ export class CensurarPdfComponent implements OnInit, OnDestroy, AfterViewChecked
 
       if (!this.pdfDocJsInstance) {
         const dataCopy = new Uint8Array(this.rawPdfOriginalBytes.slice(0));
-        this.pdfDocJsInstance = await pdfjsLib.getDocument({ data: dataCopy }).promise;
+        this.pdfDocJsInstance = await pdfjsLib.getDocument({ data: dataCopy, standardFontDataUrl: 'assets/pdfjs/standard_fonts/' }).promise;
         this.totalPaginasManual = this.pdfDocJsInstance.numPages;
       }
 

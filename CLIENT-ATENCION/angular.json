@@ -33,9 +33,16 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "assets"
               }
             ],
             "styles": [
+              "src/assets/fonts/roboto/roboto.css",
+              "src/assets/fontawesome/css/all.min.css",
               "src/styles.css"
             ],
             "scripts": []
