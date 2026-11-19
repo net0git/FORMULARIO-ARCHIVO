@@ -162,7 +162,8 @@ export class FormularioSolicitudComponent implements OnInit {
   // =========================================================================
   // PASO 3: IDENTIDAD DEL SOLICITANTE (DNI + FOTO/PDF)
   // =========================================================================
-  onDniChange(): void {
+  onDniChange(valor: string): void {
+    this.dni = (valor || '').replace(/\D/g, '').slice(0, 8);
     if (this.dni.trim().length === 8 && this.documentoDniAdjunto) {
       this.dniValidado = true;
     } else {

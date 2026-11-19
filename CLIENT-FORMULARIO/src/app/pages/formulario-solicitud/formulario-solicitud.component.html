@@ -252,9 +252,11 @@
             <div class="pj-input-with-btn">
               <input
                 type="text"
-                maxlength="12"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="8"
                 [(ngModel)]="dni"
-                (ngModelChange)="onDniChange()"
+                (ngModelChange)="onDniChange($event)"
                 placeholder="Ingrese 8 dígitos de su DNI"
                 class="pj-input"
               />
