@@ -221,7 +221,8 @@ export class FormularioSolicitudComponent implements OnInit {
       !this.apellidos.trim() ||
       !this.nombres.trim() ||
       !this.email.trim() ||
-      !this.celular.trim()
+      !this.celular.trim() ||
+      !this.domicilioProcesal.trim()
     ) {
       this.alertasValidacion.push('LLENE TODOS LOS CAMPOS PARA CONTINUAR EN LA SIGUIENTE PANTALLA');
     }
