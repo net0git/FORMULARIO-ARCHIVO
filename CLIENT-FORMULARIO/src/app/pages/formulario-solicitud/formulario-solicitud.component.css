@@ -962,25 +962,32 @@
 
 @media (max-width: 600px) {
   .pj-top-utility-bar {
-    flex-wrap: wrap;
-    row-gap: 8px;
+    flex-wrap: nowrap;
+    column-gap: 6px;
     padding: 10px 14px;
   }
 
   .pj-top-left-brand {
     min-width: 0;
     flex: 1 1 auto;
+    gap: 6px;
   }
 
   .pj-brand-title {
-    font-size: 14px;
+    min-width: 0;
+    overflow: hidden;
+    font-size: clamp(11px, 3.8vw, 14px);
     letter-spacing: 0.3px;
     white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .pj-subtle-status {
-    flex: 1 0 100%;
+    flex: 0 0 auto;
     justify-content: center;
+    gap: 4px;
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .status-label-full {
