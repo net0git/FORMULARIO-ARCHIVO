@@ -72,40 +72,7 @@ export interface CostoTramite {
 }
 
 export const CORTES_SUPERIORES: string[] = [
-  'AMAZONAS',
-  'ANCASH',
-  'APURIMAC',
-  'AREQUIPA',
-  'AYACUCHO',
-  'CAJAMARCA',
-  'CALLAO',
-  'CAÑETE',
-  'CUSCO',
-  'HUANCAVELICA',
-  'HUANUCO',
-  'HUAURA',
-  'ICA',
-  'JUNIN',
-  'LA LIBERTAD',
-  'LAMBAYEQUE',
-  'LIMA',
-  'LIMA ESTE',
-  'LIMA NORTE',
-  'LIMA SUR',
-  'LORETO',
-  'MADRE DE DIOS',
-  'MOQUEGUA',
-  'PASCO',
-  'PIURA',
-  'PUENTE PIEDRA - VENTANILLA',
-  'PUNO',
-  'SAN MARTIN',
-  'SANTA',
-  'SELVA CENTRAL',
-  'SULLANA',
-  'TACNA',
-  'TUMBES',
-  'UCAYALI'
+  'CUSCO'
 ];
 
 export const TIPOS_USUARIO: { valor: string; etiqueta: string }[] = [

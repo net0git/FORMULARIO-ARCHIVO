@@ -40,7 +40,7 @@ export class FormularioSolicitudComponent implements OnInit {
   aniosDisponibles: string[] = [];
 
   // Paso 2: Datos del Tipo de solicitud
-  corteSeleccionada = 'AMAZONAS';
+  corteSeleccionada = 'CUSCO';
   tipoUsuarioSeleccionado = 'Parte procesal';
   solicitoSeleccionado = '';
   razonSolicitud = '';
