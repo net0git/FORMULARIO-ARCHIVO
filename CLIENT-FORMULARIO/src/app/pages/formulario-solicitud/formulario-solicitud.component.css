@@ -59,6 +59,10 @@
   background: #d9534f;
 }
 
+.status-label-short {
+  display: none;
+}
+
 .pj-subtle-status.checking .status-dot {
   background: #f0ad4e;
 }
@@ -977,6 +981,14 @@
   .pj-subtle-status {
     flex: 1 0 100%;
     justify-content: center;
+  }
+
+  .status-label-full {
+    display: none;
+  }
+
+  .status-label-short {
+    display: inline;
   }
 
   .pj-main-split,

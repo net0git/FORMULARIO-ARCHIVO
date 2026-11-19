@@ -12,8 +12,11 @@
 
     <div class="pj-subtle-status" [class.online]="conectado" [class.checking]="verificandoConexion">
       <span class="status-dot"></span>
-      <span class="status-label">
+      <span class="status-label status-label-full">
         {{ verificandoConexion ? 'Verificando servicio...' : (conectado ? 'Servicio en línea' : 'Servicio sin conexión') }}
+      </span>
+      <span class="status-label status-label-short">
+        {{ verificandoConexion ? 'Verificando servicio...' : (conectado ? 'En línea' : 'Servicio sin conexión') }}
       </span>
     </div>
   </div>
