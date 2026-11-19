@@ -23,22 +23,11 @@
 }
 
 .pj-logo-emblem {
-  display: grid;
-  grid-template-columns: repeat(2, 16px);
-  grid-template-rows: repeat(2, 16px);
-  gap: 3px;
-}
-
-.pj-logo-emblem span {
-  border: 3px solid var(--pj-guinda);
-  position: relative;
-}
-
-.pj-logo-emblem span::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border: 1.5px solid var(--pj-guinda);
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .pj-brand-title {
