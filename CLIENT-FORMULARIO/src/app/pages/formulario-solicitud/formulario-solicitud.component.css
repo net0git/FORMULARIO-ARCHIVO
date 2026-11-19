@@ -10,6 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 66px;
+  box-sizing: border-box;
   padding: 12px 28px;
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid #dcdcdc;
@@ -55,6 +57,10 @@
   height: 8px;
   border-radius: 50%;
   background: #d9534f;
+}
+
+.status-label-short {
+  display: none;
 }
 
 .pj-subtle-status.checking .status-dot {
@@ -602,8 +608,8 @@
 }
 
 .btn-pj-file-label {
-  background: #f8f9fa;
-  color: #7b1e22;
+  background: #a70b0b;
+  color: #ffffff;
   padding: 5px 11px;
   border-radius: 4px;
   font-size: 12px;
@@ -616,7 +622,7 @@
 }
 
 .btn-pj-file-label:hover {
-  background: #e2e6ea;
+  background: #8f0909;
 }
 
 .pj-file-name {
@@ -951,5 +957,113 @@
   }
   .pj-costs-footer {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .pj-top-utility-bar {
+    flex-wrap: nowrap;
+    column-gap: 6px;
+    padding: 10px 14px;
+  }
+
+  .pj-top-left-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 6px;
+  }
+
+  .pj-brand-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: clamp(11px, 3.8vw, 14px);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .pj-subtle-status {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
+  .status-label-full {
+    display: none;
+  }
+
+  .status-label-short {
+    display: inline;
+  }
+
+  .pj-main-split,
+  .pj-center-hero,
+  .pj-right-form-column {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .pj-hero-content {
+    padding: 24px 16px;
+  }
+
+  .pj-system-heading {
+    width: 100%;
+  }
+
+  .pj-heading-line1,
+  .pj-heading-line2 {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: clamp(18px, 5.8vw, 24px);
+  }
+
+  .pj-heading-line2 {
+    padding-left: 0;
+  }
+
+  .pj-chevron {
+    font-size: 26px;
+  }
+
+  .pj-subtitle-text {
+    font-size: 14px;
+  }
+
+  .pj-quote-container {
+    padding: 10px 24px;
+  }
+
+  .pj-quote-body {
+    font-size: 13px;
+  }
+
+  .pj-quote-mark {
+    font-size: 42px;
+  }
+
+  .pj-costs-footer {
+    padding: 18px 16px 22px;
+  }
+
+  .pj-costs-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .pj-cost-item {
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .cost-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .pj-two-cols {
+    grid-template-columns: 1fr;
   }
 }

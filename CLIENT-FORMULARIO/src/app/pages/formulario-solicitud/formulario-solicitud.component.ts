@@ -40,7 +40,7 @@ export class FormularioSolicitudComponent implements OnInit {
   aniosDisponibles: string[] = [];
 
   // Paso 2: Datos del Tipo de solicitud
-  corteSeleccionada = 'AMAZONAS';
+  corteSeleccionada = 'CUSCO';
   tipoUsuarioSeleccionado = 'Parte procesal';
   solicitoSeleccionado = '';
   razonSolicitud = '';
@@ -162,7 +162,8 @@ export class FormularioSolicitudComponent implements OnInit {
   // =========================================================================
   // PASO 3: IDENTIDAD DEL SOLICITANTE (DNI + FOTO/PDF)
   // =========================================================================
-  onDniChange(): void {
+  onDniChange(valor: string): void {
+    this.dni = (valor || '').replace(/\D/g, '').slice(0, 8);
     if (this.dni.trim().length === 8 && this.documentoDniAdjunto) {
       this.dniValidado = true;
     } else {
@@ -221,7 +222,8 @@ export class FormularioSolicitudComponent implements OnInit {
       !this.apellidos.trim() ||
       !this.nombres.trim() ||
       !this.email.trim() ||
-      !this.celular.trim()
+      !this.celular.trim() ||
+      !this.domicilioProcesal.trim()
     ) {
       this.alertasValidacion.push('LLENE TODOS LOS CAMPOS PARA CONTINUAR EN LA SIGUIENTE PANTALLA');
     }
