@@ -141,7 +141,8 @@
 
 .pj-left-accent-bar {
   background: linear-gradient(180deg, #989a9e 0%, #808285 100%);
-  margin: 28px 0 0 0;
+  height: 100%;
+  margin: 0;
 }
 
 /* Centro: Hero y Footer de Costos */
