@@ -644,7 +644,11 @@
   <div class="pj-resumen-celular fade-in" (click)="$event.stopPropagation()">
     <div class="pj-resumen-celular-header">
       <strong>Resumen de solicitud</strong>
-      <button type="button" (click)="mostrarResumenCelular = false">&times;</button>
+      <button
+        type="button"
+        (click)="cerrarResumenCelular()"
+        [disabled]="enviandoResumenCelular"
+      >&times;</button>
     </div>
 
     <div class="pj-resumen-celular-body" *ngIf="solicitudRecienRegistrada as solicitud">

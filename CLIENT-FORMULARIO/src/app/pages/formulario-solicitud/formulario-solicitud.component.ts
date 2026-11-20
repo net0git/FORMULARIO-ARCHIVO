@@ -86,6 +86,7 @@ export class FormularioSolicitudComponent implements OnInit {
   mostrarResumenCelular = false;
   enviandoResumenCelular = false;
   mensajeResumenCelular = '';
+  correoResumenCelularEnviado = false;
 
   constructor(
     public archivoService: ArchivoService,
@@ -415,6 +416,7 @@ export class FormularioSolicitudComponent implements OnInit {
     this.mostrarAlertaSolicitudRegistrada = false;
     this.mostrarVisorPdf = false;
     this.mensajeResumenCelular = '';
+    this.correoResumenCelularEnviado = false;
     this.mostrarResumenCelular = true;
   }
 
@@ -439,12 +441,13 @@ export class FormularioSolicitudComponent implements OnInit {
     if (this.solicitudRecienRegistrada) {
       this.mostrarVisorPdf = false;
       this.mensajeResumenCelular = '';
+      this.correoResumenCelularEnviado = false;
       this.mostrarResumenCelular = true;
     }
   }
 
-  async enviarResumenCelular(): Promise<void> {
-    if (!this.solicitudRecienRegistrada || this.enviandoResumenCelular) return;
+  async enviarResumenCelular(): Promise<boolean> {
+    if (!this.solicitudRecienRegistrada || this.enviandoResumenCelular) return false;
 
     this.enviandoResumenCelular = true;
     this.mensajeResumenCelular = '';
@@ -457,11 +460,26 @@ export class FormularioSolicitudComponent implements OnInit {
       this.mensajeResumenCelular = resultado.ok
         ? 'Constancia enviada correctamente.'
         : (resultado.error || 'No se pudo enviar la constancia.');
+      this.correoResumenCelularEnviado = resultado.ok;
+      return resultado.ok;
     } catch {
       this.mensajeResumenCelular = 'No se pudo enviar la constancia.';
+      return false;
     } finally {
       this.enviandoResumenCelular = false;
     }
+  }
+
+  async cerrarResumenCelular(): Promise<void> {
+    if (this.enviandoResumenCelular) return;
+
+    if (!this.correoResumenCelularEnviado) {
+      const enviado = await this.enviarResumenCelular();
+      if (!enviado) return;
+    }
+
+    this.mostrarResumenCelular = false;
+    window.location.reload();
   }
 
   async descargarResumenCelular(): Promise<void> {
