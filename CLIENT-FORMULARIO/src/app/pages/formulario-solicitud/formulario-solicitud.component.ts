@@ -436,6 +436,7 @@ export class FormularioSolicitudComponent implements OnInit {
       await this.mostrarSolicitudTemporal();
     }
     if (this.solicitudRecienRegistrada) {
+      this.mostrarVisorPdf = false;
       this.mensajeResumenCelular = '';
       this.mostrarResumenCelular = true;
     }
