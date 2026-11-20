@@ -87,6 +87,7 @@ export class FormularioSolicitudComponent implements OnInit {
   resumenSoloDescargar = false;
   mostrarMensajeEnvioTemporalModal = false;
   mensajeEnvioTemporalPreparando = false;
+  mensajeEnvioTemporalError = '';
   enviandoResumenCelular = false;
   mensajeResumenCelular = '';
   correoResumenCelularEnviado = false;
@@ -401,13 +402,7 @@ export class FormularioSolicitudComponent implements OnInit {
       });
 
       this.solicitudRecienRegistrada = creada;
-      this.mostrarAlertaSolicitudRegistrada = true;
-
-      setTimeout(() => {
-        if (this.mostrarAlertaSolicitudRegistrada) {
-          this.cerrarAlertaYVerResumen();
-        }
-      }, 1800);
+      await this.iniciarProcesoFinalSolicitud();
     } catch {
       this.alertasValidacion.push('NO SE PUDO ENVIAR LA SOLICITUD. INTENTE NUEVAMENTE.');
     } finally {
@@ -422,6 +417,30 @@ export class FormularioSolicitudComponent implements OnInit {
     this.correoResumenCelularEnviado = false;
     this.resumenSoloDescargar = false;
     this.mostrarResumenCelular = true;
+  }
+
+  private async iniciarProcesoFinalSolicitud(): Promise<void> {
+    this.mostrarAlertaSolicitudRegistrada = false;
+    this.mostrarVisorPdf = false;
+    this.mostrarResumenCelular = false;
+    this.mostrarMensajeEnvioTemporalModal = true;
+    this.mensajeEnvioTemporalPreparando = true;
+    this.mensajeEnvioTemporalError = '';
+    this.resumenSoloDescargar = false;
+
+    const inicio = Date.now();
+    const enviado = await this.enviarResumenCelular();
+    const tiempoRestante = Math.max(0, 3000 - (Date.now() - inicio));
+
+    if (tiempoRestante > 0) {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, tiempoRestante));
+    }
+
+    this.mensajeEnvioTemporalPreparando = false;
+    if (!enviado) {
+      this.mensajeEnvioTemporalError =
+        this.mensajeResumenCelular || 'No se pudo enviar automáticamente la constancia.';
+    }
   }
 
   async mostrarSolicitudTemporal(): Promise<void> {
@@ -451,6 +470,7 @@ export class FormularioSolicitudComponent implements OnInit {
     }
 
     this.mensajeEnvioTemporalPreparando = true;
+    this.mensajeEnvioTemporalError = '';
     this.mostrarMensajeEnvioTemporalModal = true;
     window.setTimeout(() => {
       this.mensajeEnvioTemporalPreparando = false;
@@ -458,7 +478,7 @@ export class FormularioSolicitudComponent implements OnInit {
   }
 
   continuarDesdeMensajeEnvioTemporal(): void {
-    if (this.mensajeEnvioTemporalPreparando) return;
+    if (this.mensajeEnvioTemporalPreparando || this.mensajeEnvioTemporalError) return;
 
     this.mostrarMensajeEnvioTemporalModal = false;
     this.mostrarVisorPdf = false;

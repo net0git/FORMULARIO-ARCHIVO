@@ -452,6 +452,13 @@
   font-weight: 700;
 }
 
+.pj-envio-preview-error {
+  margin: 0 0 20px;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .pj-envio-preview .btn-pj-nav {
   min-width: 130px;
   justify-content: center;

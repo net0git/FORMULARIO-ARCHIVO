@@ -664,7 +664,11 @@
     </div>
     <div class="pj-envio-preview-note">
       <i class="fa-solid fa-envelope"></i>
-      <span>Su constancia será enviada al correo registrado.</span>
+      <span *ngIf="mensajeEnvioTemporalPreparando">La constancia se está preparando y enviando al correo registrado.</span>
+      <span *ngIf="!mensajeEnvioTemporalPreparando && !mensajeEnvioTemporalError">
+        La constancia fue enviada al correo registrado.
+      </span>
+      <span *ngIf="mensajeEnvioTemporalError">No se pudo enviar la constancia automáticamente.</span>
     </div>
     <p class="pj-envio-preview-foot" *ngIf="mensajeEnvioTemporalPreparando">
       <i class="fa-solid fa-spinner fa-spin"></i>
@@ -673,10 +677,13 @@
     <p class="pj-envio-preview-foot ready" *ngIf="!mensajeEnvioTemporalPreparando">
       Su constancia ya está preparada.
     </p>
+    <p class="pj-envio-preview-error" *ngIf="mensajeEnvioTemporalError">
+      {{ mensajeEnvioTemporalError }}
+    </p>
     <button
       type="button"
       class="btn-pj-nav register"
-      [disabled]="mensajeEnvioTemporalPreparando"
+      [disabled]="mensajeEnvioTemporalPreparando || mensajeEnvioTemporalError"
       (click)="continuarDesdeMensajeEnvioTemporal()"
     >
       <i [class]="mensajeEnvioTemporalPreparando ? 'fa-solid fa-lock' : 'fa-solid fa-check'"></i>
