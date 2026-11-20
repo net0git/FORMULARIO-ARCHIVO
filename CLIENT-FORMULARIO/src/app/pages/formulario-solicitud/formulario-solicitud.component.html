@@ -332,8 +332,11 @@
             <label>Teléfono Celular: <span class="req">(*)</span></label>
             <input
               type="tel"
-              maxlength="15"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="9"
               [(ngModel)]="celular"
+              (ngModelChange)="onCelularChange($event)"
               placeholder="Ej. 987654321"
               class="pj-input"
             />
@@ -385,6 +388,9 @@
                 <input
                   type="text"
                   [(ngModel)]="numeroExpedienteCorto"
+                  (ngModelChange)="onNumeroExpedienteChange($event)"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
                   placeholder="Número (Ej: 178)"
                   class="pj-input"
                 />
@@ -450,7 +456,7 @@
           </div>
 
           <div class="pj-field-group">
-            <label>Juzgado/Instancia: <span class="req">(*)</span></label>
+            <label>Juzgado/Instancia:</label>
             <input
               type="text"
               [(ngModel)]="juzgadoInstancia"

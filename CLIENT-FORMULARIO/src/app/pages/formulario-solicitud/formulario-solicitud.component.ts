@@ -181,6 +181,10 @@ export class FormularioSolicitudComponent implements OnInit {
     this.dniValidado = true;
   }
 
+  onCelularChange(valor: string): void {
+    this.celular = (valor || '').replace(/\D/g, '').slice(0, 9);
+  }
+
   onSeleccionarArchivoDni(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
@@ -249,6 +253,10 @@ export class FormularioSolicitudComponent implements OnInit {
     }
   }
 
+  onNumeroExpedienteChange(valor: string): void {
+    this.numeroExpedienteCorto = (valor || '').replace(/\D/g, '');
+  }
+
   irAPaso5(): void {
     this.limpiarAlertas();
     if (!this.conectado) return;
@@ -266,8 +274,7 @@ export class FormularioSolicitudComponent implements OnInit {
     if (
       !this.demandante.trim() ||
       !this.demandado.trim() ||
-      !this.materiaDelito.trim() ||
-      !this.juzgadoInstancia.trim()
+      !this.materiaDelito.trim()
     ) {
       this.alertasValidacion.push('LLENE TODOS LOS CAMPOS PARA CONTINUAR EN LA SIGUIENTE PANTALLA');
     }
