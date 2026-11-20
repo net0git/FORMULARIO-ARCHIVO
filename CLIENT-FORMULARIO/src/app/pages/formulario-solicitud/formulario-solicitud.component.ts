@@ -443,40 +443,6 @@ export class FormularioSolicitudComponent implements OnInit {
     }
   }
 
-  async mostrarSolicitudTemporal(): Promise<void> {
-    try {
-      const respuesta = await fetch('solicitud-temporal.json');
-      if (!respuesta.ok) {
-        throw new Error('No se encontró la solicitud temporal');
-      }
-
-      this.solicitudRecienRegistrada = await respuesta.json() as SolicitudArchivo;
-      this.mostrarVisorPdf = true;
-    } catch {
-      this.alertasValidacion.push('NO SE PUDO CARGAR LA SOLICITUD TEMPORAL');
-    }
-  }
-
-  async mostrarMensajeEnvioTemporal(): Promise<void> {
-    if (!this.solicitudRecienRegistrada) {
-      try {
-        const respuesta = await fetch('solicitud-temporal.json');
-        if (respuesta.ok) {
-          this.solicitudRecienRegistrada = await respuesta.json() as SolicitudArchivo;
-        }
-      } catch {
-        // La vista de prueba puede funcionar con el código de ejemplo.
-      }
-    }
-
-    this.mensajeEnvioTemporalPreparando = true;
-    this.mensajeEnvioTemporalError = '';
-    this.mostrarMensajeEnvioTemporalModal = true;
-    window.setTimeout(() => {
-      this.mensajeEnvioTemporalPreparando = false;
-    }, 3000);
-  }
-
   continuarDesdeMensajeEnvioTemporal(): void {
     if (this.mensajeEnvioTemporalPreparando || this.mensajeEnvioTemporalError) return;
 
@@ -486,19 +452,6 @@ export class FormularioSolicitudComponent implements OnInit {
     this.correoResumenCelularEnviado = true;
     this.resumenSoloDescargar = true;
     this.mostrarResumenCelular = true;
-  }
-
-  async abrirResumenCelular(): Promise<void> {
-    if (!this.solicitudRecienRegistrada) {
-      await this.mostrarSolicitudTemporal();
-    }
-    if (this.solicitudRecienRegistrada) {
-      this.mostrarVisorPdf = false;
-      this.mensajeResumenCelular = '';
-      this.correoResumenCelularEnviado = false;
-      this.resumenSoloDescargar = false;
-      this.mostrarResumenCelular = true;
-    }
   }
 
   async enviarResumenCelular(): Promise<boolean> {
