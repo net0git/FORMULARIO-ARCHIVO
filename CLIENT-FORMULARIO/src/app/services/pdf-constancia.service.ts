@@ -185,8 +185,6 @@ export class PdfConstanciaService {
     doc.setTextColor(95, 95, 95);
     doc.text('PODER', x + 14.5, y + 3.5);
     doc.text('JUDICIAL', x + 14.5, y + 7.2);
-    doc.setFont('times', 'normal');
-    doc.setFontSize(7.5);
     doc.text('DEL PERÚ', x + 14.5, y + 10.8);
   }
 
