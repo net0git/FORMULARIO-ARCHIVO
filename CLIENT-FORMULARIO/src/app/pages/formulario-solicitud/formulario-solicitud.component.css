@@ -256,6 +256,22 @@
   line-height: 1.55;
 }
 
+.btn-temporal-solicitud {
+  align-self: center;
+  margin-top: 16px;
+  padding: 8px 14px;
+  border: 1px dashed #a70b0b;
+  border-radius: 4px;
+  background: rgba(167, 11, 11, 0.08);
+  color: #8f0909;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.btn-temporal-solicitud:hover {
+  background: rgba(167, 11, 11, 0.16);
+}
+
 /* Barra inferior de Costos de Trámites (Págs. 6, 7 y 8 del Manual) */
 .pj-costs-footer {
   background: var(--pj-footer-bg);

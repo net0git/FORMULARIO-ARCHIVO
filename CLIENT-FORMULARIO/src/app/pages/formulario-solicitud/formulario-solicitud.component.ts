@@ -410,6 +410,20 @@ export class FormularioSolicitudComponent implements OnInit {
     this.mostrarVisorPdf = true;
   }
 
+  async mostrarSolicitudTemporal(): Promise<void> {
+    try {
+      const respuesta = await fetch('solicitud-temporal.json');
+      if (!respuesta.ok) {
+        throw new Error('No se encontró la solicitud temporal');
+      }
+
+      this.solicitudRecienRegistrada = await respuesta.json() as SolicitudArchivo;
+      this.mostrarVisorPdf = true;
+    } catch {
+      this.alertasValidacion.push('NO SE PUDO CARGAR LA SOLICITUD TEMPORAL');
+    }
+  }
+
   finalizarYReiniciarFormulario(): void {
     this.mostrarVisorPdf = false;
     this.paso = 1;

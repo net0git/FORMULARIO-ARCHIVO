@@ -1,0 +1,66 @@
+{
+  "idSolicitud": 999999,
+  "nroSolicitud": 999999,
+  "estado": "PENDIENTE",
+  "corte": "CUSCO",
+  "tipoUsuario": "PARTE PROCESAL",
+  "tipoSolicitud": "BÚSQUEDA Y LECTURA",
+  "razonSolicitud": "SOLICITUD TEMPORAL PARA PRUEBAS DEL VISOR",
+  "fechaInicio": "19/11/2026 10:30",
+  "fechaFinal": "",
+  "tiempoTranscurrido": "",
+  "dni": "72677832",
+  "apellidos": "PÉREZ QUISPE",
+  "nombres": "JUAN CARLOS",
+  "email": "prueba@ejemplo.com",
+  "celular": "987654321",
+  "domicilioProcesal": "Casilla judicial 12345",
+  "nroExpediente": "00123-2024-0-1001-JR-CI-01",
+  "numeroExpedienteCorto": "00123",
+  "anioExpediente": "2024",
+  "codigoCompletoExpediente": "00123-2024-0-1001-JR-CI-01",
+  "demandante": "JUAN CARLOS PÉREZ QUISPE",
+  "demandado": "EMPRESA DEMO S.A.C.",
+  "materiaDelito": "OBLIGACIÓN DE DAR SUMA DE DINERO",
+  "juzgadoEmisor": "1° JUZGADO CIVIL",
+  "secretarioRemitente": "",
+  "fechaEnvioArchivo": "19/11/2026 10:30",
+  "juzgadoRemitir": "",
+  "motivoTramite": "SOLICITUD TEMPORAL PARA PRUEBAS DEL VISOR",
+  "ubicacion": "",
+  "anaquel": "",
+  "fila": "",
+  "columna": "",
+  "paquete": "",
+  "documentos": [
+    {
+      "id": 999991,
+      "nombreArchivo": "DNI_PRUEBA.jpg",
+      "descripcion": "DNI DEL SOLICITANTE",
+      "tipo": "DNI",
+      "mimeType": "image/jpeg",
+      "tamano": 245000
+    },
+    {
+      "id": 999992,
+      "nombreArchivo": "TASA_JUDICIAL_PRUEBA.pdf",
+      "descripcion": "TASA JUDICIAL",
+      "tipo": "TASA",
+      "mimeType": "application/pdf",
+      "tamano": 185000
+    }
+  ],
+  "eventos": [
+    {
+      "idEvento": 999991,
+      "idSolicitud": 999999,
+      "accion": "REGISTRO DE SOLICITUD",
+      "usuario": "72677832",
+      "trabajador": "JUAN CARLOS PÉREZ QUISPE",
+      "descripcion": "SOLICITUD TEMPORAL PARA PRUEBAS DEL VISOR",
+      "fecha": "19/11/2026 10:30",
+      "documento": null
+    }
+  ],
+  "carpetaDriveUrl": ""
+}
