@@ -26,7 +26,7 @@ import { PDFDocument } from 'pdf-lib';
           </div>
 
           <div class="pdf-toolbar-title">
-            {{ documento ? (documento.nombreArchivo || documento.descripcion || 'DOCUMENTO ADJUNTO') : ('EXPEDIENTE Y DOCUMENTACIÓN DE EVENTOS - SOL. N° ' + solicitud?.nroSolicitud) }}
+            {{ documento ? (documento.nombreArchivo || documento.descripcion || 'DOCUMENTO ADJUNTO') : ('EXPEDIENTE Y DOCUMENTACIÓN DE EVENTOS - CÓDIGO ' + solicitud?.idSolicitud) }}
           </div>
 
           <div class="pdf-toolbar-actions">
@@ -139,7 +139,7 @@ import { PDFDocument } from 'pdf-lib';
               </div>
 
               <div class="a4-title">
-                SOLICITUD DE ARCHIVO - NRO: {{ solicitud.nroSolicitud }}
+                SOLICITUD DE ARCHIVO - CÓDIGO: {{ solicitud.idSolicitud }}
               </div>
             </div>
 
@@ -840,8 +840,8 @@ export class PdfViewerModalComponent implements OnChanges {
       const base64 = await pdfFinal.saveAsBase64({ dataUri: true });
       const pseudoDoc: DocumentoAdjunto = {
         id: 0,
-        nombreArchivo: 'DOCUMENTOS_SOLICITUD_EVENTOS_' + sol.nroSolicitud + '.pdf',
-        descripcion: 'DOC (SOLICITUD / Eventos Realizados) - Sol. N° ' + sol.nroSolicitud,
+        nombreArchivo: 'DOCUMENTOS_SOLICITUD_EVENTOS_' + sol.idSolicitud + '.pdf',
+        descripcion: 'DOC (SOLICITUD / Eventos Realizados) - Código ' + sol.idSolicitud,
         tipo: 'OTRO',
         mimeType: 'application/pdf',
         base64Data: base64

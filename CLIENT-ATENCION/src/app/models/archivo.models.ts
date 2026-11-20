@@ -14,7 +14,7 @@ export interface DocumentoAdjunto {
 
 export interface EventoSeguimiento {
   idEvento: number;
-  idSolicitud: number;
+  idSolicitud: string;
   accion: string;
   usuario: string;
   trabajador: string;
@@ -24,8 +24,7 @@ export interface EventoSeguimiento {
 }
 
 export interface SolicitudArchivo {
-  idSolicitud: number;
-  nroSolicitud: number;
+  idSolicitud: string;
   estado: EstadoSolicitud;
   corte: string;
   tipoUsuario: string;

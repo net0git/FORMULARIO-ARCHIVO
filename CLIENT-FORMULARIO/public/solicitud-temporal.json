@@ -1,6 +1,5 @@
 {
-  "idSolicitud": 999999,
-  "nroSolicitud": 999999,
+  "idSolicitud": "AB12CD",
   "estado": "PENDIENTE",
   "corte": "CUSCO",
   "tipoUsuario": "PARTE PROCESAL",
@@ -53,7 +52,7 @@
   "eventos": [
     {
       "idEvento": 999991,
-      "idSolicitud": 999999,
+  "idSolicitud": "AB12CD",
       "accion": "REGISTRO DE SOLICITUD",
       "usuario": "72677832",
       "trabajador": "JUAN CARLOS PÉREZ QUISPE",

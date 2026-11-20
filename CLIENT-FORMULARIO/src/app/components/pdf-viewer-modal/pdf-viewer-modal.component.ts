@@ -20,7 +20,7 @@ import { ArchivoService } from '../../services/archivo.service';
           </div>
 
           <div class="pdf-toolbar-title">
-            CONSTANCIA DE SOLICITUD N° {{ solicitud.nroSolicitud }}
+            CONSTANCIA DE SOLICITUD {{ solicitud.idSolicitud }}
           </div>
 
           <div class="pdf-toolbar-actions">
@@ -78,7 +78,7 @@ import { ArchivoService } from '../../services/archivo.service';
               </div>
 
               <div class="a4-title">
-                SOLICITUD DE ARCHIVO - NRO: {{ solicitud.nroSolicitud }}
+                SOLICITUD DE ARCHIVO - CÓDIGO: {{ solicitud.idSolicitud }}
               </div>
             </div>
 
