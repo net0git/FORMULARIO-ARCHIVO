@@ -6,8 +6,9 @@ import { SolicitudArchivo } from '../models/archivo.models';
   providedIn: 'root'
 })
 export class PdfConstanciaService {
+  private logoBase64Promise: Promise<string> | null = null;
 
-  generarDocumentoPdf(sol: SolicitudArchivo): jsPDF {
+  async generarDocumentoPdf(sol: SolicitudArchivo): Promise<jsPDF> {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -18,7 +19,8 @@ export class PdfConstanciaService {
     doc.setLineWidth(0.3);
     doc.rect(12, 12, 186, 273);
 
-    this.dibujarLogoPJ(doc, 20, 20);
+    const logoBase64 = await this.obtenerLogoBase64();
+    this.dibujarLogoPJ(doc, 20, 20, logoBase64);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
@@ -141,19 +143,19 @@ export class PdfConstanciaService {
     return doc;
   }
 
-  obtenerBlobUrl(sol: SolicitudArchivo): string {
-    const doc = this.generarDocumentoPdf(sol);
+  async obtenerBlobUrl(sol: SolicitudArchivo): Promise<string> {
+    const doc = await this.generarDocumentoPdf(sol);
     const blob = doc.output('blob');
     return URL.createObjectURL(blob);
   }
 
-  descargarConstanciaPdf(sol: SolicitudArchivo): void {
-    const doc = this.generarDocumentoPdf(sol);
+  async descargarConstanciaPdf(sol: SolicitudArchivo): Promise<void> {
+    const doc = await this.generarDocumentoPdf(sol);
     doc.save(`CONSTANCIA_SOLICITUD_NRO_${sol.nroSolicitud}.pdf`);
   }
 
-  obtenerBase64Pdf(sol: SolicitudArchivo): string {
-    const doc = this.generarDocumentoPdf(sol);
+  async obtenerBase64Pdf(sol: SolicitudArchivo): Promise<string> {
+    const doc = await this.generarDocumentoPdf(sol);
     return doc.output('datauristring');
   }
 
@@ -171,7 +173,24 @@ export class PdfConstanciaService {
     return y + Math.max(lines.length * 4.5, 5.2);
   }
 
-  private dibujarLogoPJ(doc: jsPDF, x: number, y: number): void {
+  private dibujarLogoPJ(doc: jsPDF, x: number, y: number, logoBase64: string): void {
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'JPEG', x, y, 12, 12);
+    } else {
+      this.dibujarEmblemaAlternativo(doc, x, y);
+    }
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(95, 95, 95);
+    doc.text('PODER', x + 14.5, y + 3.5);
+    doc.text('JUDICIAL', x + 14.5, y + 7.2);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(7.5);
+    doc.text('DEL PERÚ', x + 14.5, y + 10.8);
+  }
+
+  private dibujarEmblemaAlternativo(doc: jsPDF, x: number, y: number): void {
     doc.setDrawColor(123, 30, 34);
     doc.setFillColor(123, 30, 34);
     doc.setLineWidth(0.7);
@@ -188,15 +207,25 @@ export class PdfConstanciaService {
     doc.rect(x + s + gap + 1.2, y + 1.2, s - 2.4, s - 2.4);
     doc.rect(x + 1.2, y + s + gap + 1.2, s - 2.4, s - 2.4);
     doc.rect(x + s + gap + 1.2, y + s + gap + 1.2, s - 2.4, s - 2.4);
+  }
 
-    doc.setFont('times', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(95, 95, 95);
-    doc.text('PODER', x + 14.5, y + 3.5);
-    doc.text('JUDICIAL', x + 14.5, y + 7.2);
-    doc.setFont('times', 'normal');
-    doc.setFontSize(7.5);
-    doc.text('DEL PERÚ', x + 14.5, y + 10.8);
+  private obtenerLogoBase64(): Promise<string> {
+    if (!this.logoBase64Promise) {
+      this.logoBase64Promise = fetch('assets/img/logopj.jpg')
+        .then((respuesta) => {
+          if (!respuesta.ok) throw new Error('No se pudo cargar el logo institucional');
+          return respuesta.blob();
+        })
+        .then((blob) => new Promise<string>((resolve, reject) => {
+          const lector = new FileReader();
+          lector.onload = () => resolve(String(lector.result || ''));
+          lector.onerror = () => reject(lector.error);
+          lector.readAsDataURL(blob);
+        }))
+        .catch(() => '');
+    }
+
+    return this.logoBase64Promise;
   }
 
   private formatearFechaCorta(fechaStr: string): string {

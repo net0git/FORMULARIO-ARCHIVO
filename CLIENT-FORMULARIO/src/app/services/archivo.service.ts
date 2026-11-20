@@ -157,7 +157,7 @@ export class ArchivoService {
       ]
     };
 
-    const docSolicitudBase64 = this.pdfService.obtenerBase64Pdf(nueva);
+    const docSolicitudBase64 = await this.pdfService.obtenerBase64Pdf(nueva);
     const documentoSolicitud = {
       id: Date.now(),
       nombreArchivo: `CONSTANCIA_SOLICITUD_DNI_${nueva.dni || 'EXT'}.pdf`,
