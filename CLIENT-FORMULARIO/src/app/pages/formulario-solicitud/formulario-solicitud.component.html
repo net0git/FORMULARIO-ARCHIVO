@@ -59,6 +59,10 @@
           <i class="fa-solid fa-flask"></i>
           Ver solicitud temporal
         </button>
+        <button type="button" class="btn-temporal-solicitud" (click)="abrirResumenCelular()">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          en ven celular
+        </button>
       </div>
 
       <!-- Barra inferior de Costos de Trámites (Cargados en tiempo real desde la pestaña "Tramites" de Google Sheets) -->
@@ -632,6 +636,62 @@
       </div>
       <h4>SOLICITUD REGISTRADA</h4>
       <p>ESPERE MIENTRAS GENERA SU CONSTANCIA</p>
+    </div>
+  </div>
+</div>
+
+<div class="pj-modal-backdrop" *ngIf="mostrarResumenCelular">
+  <div class="pj-resumen-celular fade-in" (click)="$event.stopPropagation()">
+    <div class="pj-resumen-celular-header">
+      <strong>Resumen de solicitud</strong>
+      <button type="button" (click)="mostrarResumenCelular = false">&times;</button>
+    </div>
+
+    <div class="pj-resumen-celular-body" *ngIf="solicitudRecienRegistrada as solicitud">
+      <div class="pj-resumen-dato">
+        <span>Código</span>
+        <strong>{{ solicitud.idSolicitud }}</strong>
+      </div>
+      <div class="pj-resumen-dato">
+        <span>Solicitante</span>
+        <strong>{{ solicitud.nombres }} {{ solicitud.apellidos }}</strong>
+      </div>
+      <div class="pj-resumen-dato">
+        <span>DNI</span>
+        <strong>{{ solicitud.dni }}</strong>
+      </div>
+      <div class="pj-resumen-dato">
+        <span>Correo</span>
+        <strong>{{ solicitud.email }}</strong>
+      </div>
+      <div class="pj-resumen-dato">
+        <span>Expediente</span>
+        <strong>{{ solicitud.nroExpediente }}</strong>
+      </div>
+      <div class="pj-resumen-dato">
+        <span>Solicitud</span>
+        <strong>{{ solicitud.tipoSolicitud }}</strong>
+      </div>
+
+      <p class="pj-resumen-mensaje" *ngIf="mensajeResumenCelular">
+        {{ mensajeResumenCelular }}
+      </p>
+
+      <div class="pj-resumen-acciones">
+        <button
+          type="button"
+          class="btn-pj-nav"
+          (click)="enviarResumenCelular()"
+          [disabled]="enviandoResumenCelular"
+        >
+          <i [class]="enviandoResumenCelular ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-envelope'"></i>
+          {{ enviandoResumenCelular ? 'Enviando...' : 'Enviar a correo' }}
+        </button>
+        <button type="button" class="btn-pj-nav register" (click)="descargarResumenCelular()">
+          <i class="fa-solid fa-download"></i>
+          Descargar PDF
+        </button>
+      </div>
     </div>
   </div>
 </div>

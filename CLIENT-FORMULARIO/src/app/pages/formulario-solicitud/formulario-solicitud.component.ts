@@ -10,6 +10,7 @@ import {
 } from '../../models/archivo.models';
 import { ArchivoService } from '../../services/archivo.service';
 import { PdfViewerModalComponent } from '../../components/pdf-viewer-modal/pdf-viewer-modal.component';
+import { PdfConstanciaService } from '../../services/pdf-constancia.service';
 
 @Component({
   selector: 'app-formulario-solicitud',
@@ -82,8 +83,14 @@ export class FormularioSolicitudComponent implements OnInit {
   mostrarAlertaSolicitudRegistrada = false;
   solicitudRecienRegistrada: SolicitudArchivo | null = null;
   mostrarVisorPdf = false;
+  mostrarResumenCelular = false;
+  enviandoResumenCelular = false;
+  mensajeResumenCelular = '';
 
-  constructor(public archivoService: ArchivoService) {}
+  constructor(
+    public archivoService: ArchivoService,
+    private pdfConstanciaService: PdfConstanciaService
+  ) {}
 
   ngOnInit(): void {
     const anioActual = new Date().getFullYear();
@@ -421,6 +428,43 @@ export class FormularioSolicitudComponent implements OnInit {
       this.mostrarVisorPdf = true;
     } catch {
       this.alertasValidacion.push('NO SE PUDO CARGAR LA SOLICITUD TEMPORAL');
+    }
+  }
+
+  async abrirResumenCelular(): Promise<void> {
+    if (!this.solicitudRecienRegistrada) {
+      await this.mostrarSolicitudTemporal();
+    }
+    if (this.solicitudRecienRegistrada) {
+      this.mensajeResumenCelular = '';
+      this.mostrarResumenCelular = true;
+    }
+  }
+
+  async enviarResumenCelular(): Promise<void> {
+    if (!this.solicitudRecienRegistrada || this.enviandoResumenCelular) return;
+
+    this.enviandoResumenCelular = true;
+    this.mensajeResumenCelular = '';
+    try {
+      const pdfBase64 = await this.pdfConstanciaService.obtenerBase64Pdf(this.solicitudRecienRegistrada);
+      const resultado = await this.archivoService.enviarConstanciaPorCorreo(
+        this.solicitudRecienRegistrada,
+        pdfBase64
+      );
+      this.mensajeResumenCelular = resultado.ok
+        ? 'Constancia enviada correctamente.'
+        : (resultado.error || 'No se pudo enviar la constancia.');
+    } catch {
+      this.mensajeResumenCelular = 'No se pudo enviar la constancia.';
+    } finally {
+      this.enviandoResumenCelular = false;
+    }
+  }
+
+  async descargarResumenCelular(): Promise<void> {
+    if (this.solicitudRecienRegistrada) {
+      await this.pdfConstanciaService.descargarConstanciaPdf(this.solicitudRecienRegistrada);
     }
   }
 
