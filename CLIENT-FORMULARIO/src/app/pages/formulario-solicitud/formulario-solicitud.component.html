@@ -63,6 +63,10 @@
           <i class="fa-solid fa-mobile-screen-button"></i>
           en ven celular
         </button>
+        <button type="button" class="btn-temporal-solicitud" (click)="mostrarMensajeEnvioTemporal()">
+          <i class="fa-solid fa-circle-check"></i>
+          Ver mensaje de solicitud enviada
+        </button>
       </div>
 
       <!-- Barra inferior de Costos de Trámites (Cargados en tiempo real desde la pestaña "Tramites" de Google Sheets) -->
@@ -641,6 +645,31 @@
       <h4>SOLICITUD REGISTRADA</h4>
       <p>ESPERE MIENTRAS GENERA SU CONSTANCIA</p>
     </div>
+  </div>
+</div>
+
+<div class="pj-modal-backdrop" *ngIf="mostrarMensajeEnvioTemporalModal">
+  <div class="pj-envio-preview fade-in" (click)="$event.stopPropagation()">
+    <div class="pj-envio-preview-icon">
+      <i class="fa-solid fa-check"></i>
+    </div>
+    <div class="pj-envio-preview-tag">PROCESO COMPLETADO</div>
+    <h3>Solicitud enviada correctamente</h3>
+    <p class="pj-envio-preview-lead">
+      Su solicitud fue registrada en el Sistema de Gestión de Archivo Central.
+    </p>
+    <div class="pj-envio-preview-code">
+      <span>CÓDIGO DE SOLICITUD</span>
+      <strong>{{ solicitudRecienRegistrada?.idSolicitud || 'AB12CD' }}</strong>
+    </div>
+    <div class="pj-envio-preview-note">
+      <i class="fa-solid fa-envelope"></i>
+      <span>Su constancia será enviada al correo registrado.</span>
+    </div>
+    <p class="pj-envio-preview-foot">Espere un momento mientras se prepara su constancia.</p>
+    <button type="button" class="btn-pj-nav register" (click)="mostrarMensajeEnvioTemporalModal = false">
+      Entendido
+    </button>
   </div>
 </div>
 

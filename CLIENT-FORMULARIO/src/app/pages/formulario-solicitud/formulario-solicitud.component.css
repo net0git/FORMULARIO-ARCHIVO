@@ -354,6 +354,99 @@
   justify-content: center;
 }
 
+.pj-envio-preview {
+  width: 100%;
+  max-width: 430px;
+  padding: 30px 26px 24px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafb 100%);
+  border: 1px solid #d8e2e5;
+  box-shadow: 0 18px 45px rgba(22, 42, 48, 0.28);
+  text-align: center;
+}
+
+.pj-envio-preview-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #e4f4ec;
+  color: #198754;
+  font-size: 30px;
+}
+
+.pj-envio-preview-tag {
+  color: #198754;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.pj-envio-preview h3 {
+  margin: 8px 0 10px;
+  color: #263238;
+  font-size: 22px;
+}
+
+.pj-envio-preview-lead {
+  margin: 0 auto 18px;
+  color: #59666b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pj-envio-preview-code {
+  padding: 12px;
+  border: 1px dashed #9bb2b8;
+  border-radius: 8px;
+  background: #f0f6f7;
+}
+
+.pj-envio-preview-code span {
+  display: block;
+  color: #68777c;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.pj-envio-preview-code strong {
+  display: block;
+  margin-top: 4px;
+  color: #7b1e22;
+  font-size: 25px;
+  letter-spacing: 3px;
+}
+
+.pj-envio-preview-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 18px 0 8px;
+  color: #405157;
+  font-size: 13px;
+  text-align: left;
+}
+
+.pj-envio-preview-note i {
+  color: #7b1e22;
+  font-size: 18px;
+}
+
+.pj-envio-preview-foot {
+  margin: 0 0 20px;
+  color: #7b8588;
+  font-size: 12px;
+}
+
+.pj-envio-preview .btn-pj-nav {
+  min-width: 130px;
+  justify-content: center;
+}
+
 /* Barra inferior de Costos de Trámites (Págs. 6, 7 y 8 del Manual) */
 .pj-costs-footer {
   background: var(--pj-footer-bg);

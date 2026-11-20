@@ -84,6 +84,7 @@ export class FormularioSolicitudComponent implements OnInit {
   solicitudRecienRegistrada: SolicitudArchivo | null = null;
   mostrarVisorPdf = false;
   mostrarResumenCelular = false;
+  mostrarMensajeEnvioTemporalModal = false;
   enviandoResumenCelular = false;
   mensajeResumenCelular = '';
   correoResumenCelularEnviado = false;
@@ -432,6 +433,10 @@ export class FormularioSolicitudComponent implements OnInit {
     } catch {
       this.alertasValidacion.push('NO SE PUDO CARGAR LA SOLICITUD TEMPORAL');
     }
+  }
+
+  mostrarMensajeEnvioTemporal(): void {
+    this.mostrarMensajeEnvioTemporalModal = true;
   }
 
   async abrirResumenCelular(): Promise<void> {
