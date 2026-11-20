@@ -125,6 +125,8 @@ function inicializarHojas() {
     }
   }
 
+  migrarIdsSolicitudesExistentes(sheetSol, sheetSeg);
+
   // 3. Hoja Usuarios (Módulo Configuración -> Personal)
   const headersUsr = [
     'id_usuario',      // 0
@@ -507,6 +509,30 @@ function generarIdSolicitud(sheetSol) {
     existe = ids.indexOf(codigo) !== -1;
   }
   return codigo;
+}
+
+function migrarIdsSolicitudesExistentes(sheetSol, sheetSeg) {
+  const filasSolicitudes = sheetSol.getDataRange().getValues();
+  const equivalencias = {};
+
+  for (let i = 1; i < filasSolicitudes.length; i++) {
+    const idAnterior = String(filasSolicitudes[i][0] || '').trim();
+    if (idAnterior && /^\d+$/.test(idAnterior)) {
+      const idNuevo = generarIdSolicitud(sheetSol);
+      sheetSol.getRange(i + 1, 1).setValue(idNuevo);
+      equivalencias[idAnterior] = idNuevo;
+    }
+  }
+
+  if (Object.keys(equivalencias).length === 0) return;
+
+  const filasSeguimiento = sheetSeg.getDataRange().getValues();
+  for (let i = 1; i < filasSeguimiento.length; i++) {
+    const idSeguimiento = String(filasSeguimiento[i][1] || '').trim();
+    if (equivalencias[idSeguimiento]) {
+      sheetSeg.getRange(i + 1, 2).setValue(equivalencias[idSeguimiento]);
+    }
+  }
 }
 
 function crearSolicitud(sol) {
