@@ -75,7 +75,7 @@ import { ArchivoService } from '../../services/archivo.service';
                 <div class="pj-brand-text">
                   <strong>PODER</strong>
                   <strong>JUDICIAL</strong>
-                  <small>DEL PERÚ</small>
+                  <strong>DEL PERÚ</strong>
                 </div>
               </div>
 
@@ -348,10 +348,6 @@ import { ArchivoService } from '../../services/archivo.service';
       color: #666;
       line-height: 1.1;
       font-size: 11px;
-    }
-    .pj-brand-text small {
-      font-size: 9.5px;
-      margin-top: 1px;
     }
     .a4-title {
       font-size: 18px;
