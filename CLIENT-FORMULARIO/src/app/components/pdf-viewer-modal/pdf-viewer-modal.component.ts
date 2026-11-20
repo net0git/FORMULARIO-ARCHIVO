@@ -17,8 +17,6 @@ import { ArchivoService } from '../../services/archivo.service';
             <i class="fa-solid fa-table-columns"></i>
             <i class="fa-solid fa-magnifying-glass"></i>
             <span class="pdf-page-indicator">Página 1 de 1</span>
-            <span class="pdf-divider">|</span>
-            <span class="pdf-zoom">Zoom Automático</span>
           </div>
 
           <div class="pdf-toolbar-title">
@@ -228,15 +226,6 @@ import { ArchivoService } from '../../services/archivo.service';
     .pdf-page-indicator {
       background: #202224;
       padding: 2px 8px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-    .pdf-divider {
-      color: #666;
-    }
-    .pdf-zoom {
-      background: #202224;
-      padding: 2px 10px;
       border-radius: 3px;
       font-size: 12px;
     }
