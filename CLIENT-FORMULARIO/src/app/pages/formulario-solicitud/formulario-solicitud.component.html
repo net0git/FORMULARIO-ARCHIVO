@@ -666,8 +666,20 @@
       <i class="fa-solid fa-envelope"></i>
       <span>Su constancia será enviada al correo registrado.</span>
     </div>
-    <p class="pj-envio-preview-foot">Espere un momento mientras se prepara su constancia.</p>
-    <button type="button" class="btn-pj-nav register" (click)="mostrarMensajeEnvioTemporalModal = false">
+    <p class="pj-envio-preview-foot" *ngIf="mensajeEnvioTemporalPreparando">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      Espere un momento mientras se prepara su constancia.
+    </p>
+    <p class="pj-envio-preview-foot ready" *ngIf="!mensajeEnvioTemporalPreparando">
+      Su constancia ya está preparada.
+    </p>
+    <button
+      type="button"
+      class="btn-pj-nav register"
+      [disabled]="mensajeEnvioTemporalPreparando"
+      (click)="continuarDesdeMensajeEnvioTemporal()"
+    >
+      <i [class]="mensajeEnvioTemporalPreparando ? 'fa-solid fa-lock' : 'fa-solid fa-check'"></i>
       Entendido
     </button>
   </div>
@@ -716,6 +728,7 @@
 
       <div class="pj-resumen-acciones">
         <button
+          *ngIf="!resumenSoloDescargar"
           type="button"
           class="btn-pj-nav"
           (click)="enviarResumenCelular()"

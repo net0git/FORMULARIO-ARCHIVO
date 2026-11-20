@@ -84,7 +84,9 @@ export class FormularioSolicitudComponent implements OnInit {
   solicitudRecienRegistrada: SolicitudArchivo | null = null;
   mostrarVisorPdf = false;
   mostrarResumenCelular = false;
+  resumenSoloDescargar = false;
   mostrarMensajeEnvioTemporalModal = false;
+  mensajeEnvioTemporalPreparando = false;
   enviandoResumenCelular = false;
   mensajeResumenCelular = '';
   correoResumenCelularEnviado = false;
@@ -418,6 +420,7 @@ export class FormularioSolicitudComponent implements OnInit {
     this.mostrarVisorPdf = false;
     this.mensajeResumenCelular = '';
     this.correoResumenCelularEnviado = false;
+    this.resumenSoloDescargar = false;
     this.mostrarResumenCelular = true;
   }
 
@@ -435,8 +438,34 @@ export class FormularioSolicitudComponent implements OnInit {
     }
   }
 
-  mostrarMensajeEnvioTemporal(): void {
+  async mostrarMensajeEnvioTemporal(): Promise<void> {
+    if (!this.solicitudRecienRegistrada) {
+      try {
+        const respuesta = await fetch('solicitud-temporal.json');
+        if (respuesta.ok) {
+          this.solicitudRecienRegistrada = await respuesta.json() as SolicitudArchivo;
+        }
+      } catch {
+        // La vista de prueba puede funcionar con el código de ejemplo.
+      }
+    }
+
+    this.mensajeEnvioTemporalPreparando = true;
     this.mostrarMensajeEnvioTemporalModal = true;
+    window.setTimeout(() => {
+      this.mensajeEnvioTemporalPreparando = false;
+    }, 3000);
+  }
+
+  continuarDesdeMensajeEnvioTemporal(): void {
+    if (this.mensajeEnvioTemporalPreparando) return;
+
+    this.mostrarMensajeEnvioTemporalModal = false;
+    this.mostrarVisorPdf = false;
+    this.mensajeResumenCelular = 'Constancia enviada correctamente.';
+    this.correoResumenCelularEnviado = true;
+    this.resumenSoloDescargar = true;
+    this.mostrarResumenCelular = true;
   }
 
   async abrirResumenCelular(): Promise<void> {
@@ -447,6 +476,7 @@ export class FormularioSolicitudComponent implements OnInit {
       this.mostrarVisorPdf = false;
       this.mensajeResumenCelular = '';
       this.correoResumenCelularEnviado = false;
+      this.resumenSoloDescargar = false;
       this.mostrarResumenCelular = true;
     }
   }

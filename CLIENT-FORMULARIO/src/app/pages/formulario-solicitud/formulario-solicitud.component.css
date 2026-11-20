@@ -442,6 +442,16 @@
   font-size: 12px;
 }
 
+.pj-envio-preview-foot i {
+  margin-right: 6px;
+  color: #7b1e22;
+}
+
+.pj-envio-preview-foot.ready {
+  color: #198754;
+  font-weight: 700;
+}
+
 .pj-envio-preview .btn-pj-nav {
   min-width: 130px;
   justify-content: center;
