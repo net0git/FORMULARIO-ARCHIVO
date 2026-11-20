@@ -23,7 +23,7 @@ export class PdfConstanciaService {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
     doc.setTextColor(35, 35, 35);
-    doc.text(`SOLICITUD DE ARCHIVO - NRO: ${sol.nroSolicitud}`, 74, 28);
+    doc.text(`SOLICITUD DE ARCHIVO - CÓDIGO: ${sol.idSolicitud}`, 74, 28);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -165,7 +165,7 @@ export class PdfConstanciaService {
 
   descargarConstanciaPdf(sol: SolicitudArchivo): void {
     const doc = this.generarDocumentoPdf(sol);
-    doc.save(`CONSTANCIA_SOLICITUD_NRO_${sol.nroSolicitud}.pdf`);
+    doc.save(`CONSTANCIA_SOLICITUD_${sol.idSolicitud}.pdf`);
   }
 
   obtenerBase64Pdf(sol: SolicitudArchivo): string {

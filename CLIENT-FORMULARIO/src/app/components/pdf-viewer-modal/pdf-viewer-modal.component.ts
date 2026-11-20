@@ -17,12 +17,10 @@ import { ArchivoService } from '../../services/archivo.service';
             <i class="fa-solid fa-table-columns"></i>
             <i class="fa-solid fa-magnifying-glass"></i>
             <span class="pdf-page-indicator">Página 1 de 1</span>
-            <span class="pdf-divider">|</span>
-            <span class="pdf-zoom">Zoom Automático</span>
           </div>
 
           <div class="pdf-toolbar-title">
-            CONSTANCIA DE SOLICITUD N° {{ solicitud.nroSolicitud }}
+            CONSTANCIA DE SOLICITUD {{ solicitud.idSolicitud }}
           </div>
 
           <div class="pdf-toolbar-actions">
@@ -67,19 +65,20 @@ import { ArchivoService } from '../../services/archivo.service';
           <div class="pdf-a4-page" id="constancia-print-area">
             <div class="a4-header">
               <div class="pj-brand">
-                <div class="pj-emblem-grid">
-                  <span></span><span></span>
-                  <span></span><span></span>
-                </div>
+                <img
+                  class="pj-emblem-image"
+                  src="assets/img/logopj.jpg"
+                  alt="Logotipo del Poder Judicial del Perú"
+                />
                 <div class="pj-brand-text">
                   <strong>PODER</strong>
                   <strong>JUDICIAL</strong>
-                  <small>DEL PERÚ</small>
+                  <strong>DEL PERÚ</strong>
                 </div>
               </div>
 
               <div class="a4-title">
-                SOLICITUD DE ARCHIVO - NRO: {{ solicitud.nroSolicitud }}
+                SOLICITUD DE ARCHIVO - CÓDIGO: {{ solicitud.idSolicitud }}
               </div>
             </div>
 
@@ -230,15 +229,6 @@ import { ArchivoService } from '../../services/archivo.service';
       border-radius: 3px;
       font-size: 12px;
     }
-    .pdf-divider {
-      color: #666;
-    }
-    .pdf-zoom {
-      background: #202224;
-      padding: 2px 10px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
     .pdf-toolbar-title {
       font-weight: 600;
       color: #fff;
@@ -334,21 +324,11 @@ import { ArchivoService } from '../../services/archivo.service';
       align-items: center;
       gap: 8px;
     }
-    .pj-emblem-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 18px);
-      grid-template-rows: repeat(2, 18px);
-      gap: 3px;
-    }
-    .pj-emblem-grid span {
-      border: 3px solid #7b1e22;
-      position: relative;
-    }
-    .pj-emblem-grid span::after {
-      content: '';
-      position: absolute;
-      inset: 2px;
-      border: 1.5px solid #7b1e22;
+    .pj-emblem-image {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      flex-shrink: 0;
     }
     .pj-brand-text {
       display: flex;
@@ -357,10 +337,6 @@ import { ArchivoService } from '../../services/archivo.service';
       color: #666;
       line-height: 1.1;
       font-size: 11px;
-    }
-    .pj-brand-text small {
-      font-size: 9.5px;
-      margin-top: 1px;
     }
     .a4-title {
       font-size: 18px;
@@ -425,13 +401,17 @@ export class PdfViewerModalComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['solicitud'] && this.solicitud) {
-      const url = this.pdfService.obtenerBlobUrl(this.solicitud);
-      this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+      void this.prepararPdf(this.solicitud);
       this.enviandoCorreo = false;
       this.correoEnviado = false;
       this.mensajeExitoCorreo = '';
       this.mensajeErrorCorreo = '';
     }
+  }
+
+  private async prepararPdf(solicitud: SolicitudArchivo): Promise<void> {
+    const url = await this.pdfService.obtenerBlobUrl(solicitud);
+    this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
   async enviarAlCorreo(): Promise<void> {
@@ -441,7 +421,7 @@ export class PdfViewerModalComponent implements OnChanges {
     this.mensajeErrorCorreo = '';
 
     try {
-      const pdfBase64 = this.pdfService.obtenerBase64Pdf(this.solicitud);
+      const pdfBase64 = await this.pdfService.obtenerBase64Pdf(this.solicitud);
       const res = await this.archivoService.enviarConstanciaPorCorreo(this.solicitud, pdfBase64);
       if (res.ok) {
         this.correoEnviado = true;
@@ -456,15 +436,15 @@ export class PdfViewerModalComponent implements OnChanges {
     }
   }
 
-  descargar(): void {
+  async descargar(): Promise<void> {
     if (this.solicitud) {
-      this.pdfService.descargarConstanciaPdf(this.solicitud);
+      await this.pdfService.descargarConstanciaPdf(this.solicitud);
     }
   }
 
-  imprimir(): void {
+  async imprimir(): Promise<void> {
     if (!this.solicitud) return;
-    const doc = this.pdfService.generarDocumentoPdf(this.solicitud);
+    const doc = await this.pdfService.generarDocumentoPdf(this.solicitud);
     doc.autoPrint();
     const blobUrl = doc.output('bloburl');
     window.open(blobUrl, '_blank');

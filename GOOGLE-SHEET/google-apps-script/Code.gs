@@ -33,40 +33,39 @@ function inicializarHojas() {
   // 1. Hoja Solicitudes (Incluye Razón y los 3 campos de Expediente: Número, Año, Código Completo + Juzgado/Instancia)
   const headersSol = [
     'id_solicitud',               // 0 (Col 1 - A)
-    'nro_solicitud',              // 1 (Col 2 - B)
-    'estado',                     // 2 (Col 3 - C)
-    'corte',                      // 3 (Col 4 - D)
-    'tipo_usuario',               // 4 (Col 5 - E)
-    'tipo_solicitud',             // 5 (Col 6 - F)
-    'razon_solicitud',            // 6 (Col 7 - G)
-    'fecha_inicio',               // 7 (Col 8 - H)
-    'fecha_final',                // 8 (Col 9 - I)
-    'tiempo_transcurrido',        // 9 (Col 10 - J)
-    'dni',                        // 10 (Col 11 - K)
-    'apellidos',                  // 11 (Col 12 - L)
-    'nombres',                    // 12 (Col 13 - M)
-    'email',                      // 13 (Col 14 - N)
-    'celular',                    // 14 (Col 15 - O)
-    'domicilio_procesal',         // 15 (Col 16 - P)
-    'nro_expediente',             // 16 (Col 17 - Q)
-    'numero_expediente_corto',    // 17 (Col 18 - R)
-    'anio_expediente',            // 18 (Col 19 - S)
-    'codigo_completo_expediente', // 19 (Col 20 - T)
-    'demandante',                 // 20 (Col 21 - U)
-    'demandado',                  // 21 (Col 22 - V)
-    'materia_delito',             // 22 (Col 23 - W)
-    'juzgado_instancia',          // 23 (Col 24 - X)
-    'secretario_remitente',       // 24 (Col 25 - Y)
-    'fecha_envio_archivo',        // 25 (Col 26 - Z)
-    'juzgado_remitir',            // 26 (Col 27 - AA)
-    'motivo_tramite',             // 27 (Col 28 - AB)
-    'ubicacion',                  // 28 (Col 29 - AC)
-    'anaquel',                    // 29 (Col 30 - AD)
-    'fila',                       // 30 (Col 31 - AE)
-    'columna',                    // 31 (Col 32 - AF)
-    'paquete',                    // 32 (Col 33 - AG)
-    'documentos_json',            // 33 (Col 34 - AH)
-    'carpeta_drive_url'           // 34 (Col 35 - AI)
+    'estado',                     // 1 (Col 2 - B)
+    'corte',                      // 2 (Col 3 - C)
+    'tipo_usuario',               // 3 (Col 4 - D)
+    'tipo_solicitud',             // 4 (Col 5 - E)
+    'razon_solicitud',            // 5 (Col 6 - F)
+    'fecha_inicio',               // 6 (Col 7 - G)
+    'fecha_final',                // 7 (Col 8 - H)
+    'tiempo_transcurrido',        // 8 (Col 9 - I)
+    'dni',                        // 9 (Col 10 - J)
+    'apellidos',                  // 10 (Col 11 - K)
+    'nombres',                    // 11 (Col 12 - L)
+    'email',                      // 12 (Col 13 - M)
+    'celular',                    // 13 (Col 14 - N)
+    'domicilio_procesal',         // 14 (Col 15 - O)
+    'nro_expediente',             // 15 (Col 16 - P)
+    'numero_expediente_corto',    // 16 (Col 17 - Q)
+    'anio_expediente',            // 17 (Col 18 - R)
+    'codigo_completo_expediente', // 18 (Col 19 - S)
+    'demandante',                 // 19 (Col 20 - T)
+    'demandado',                  // 20 (Col 21 - U)
+    'materia_delito',             // 21 (Col 22 - V)
+    'juzgado_instancia',          // 22 (Col 23 - W)
+    'secretario_remitente',       // 23 (Col 24 - X)
+    'fecha_envio_archivo',        // 24 (Col 25 - Y)
+    'juzgado_remitir',            // 25 (Col 26 - Z)
+    'motivo_tramite',             // 26 (Col 27 - AA)
+    'ubicacion',                  // 27 (Col 28 - AB)
+    'anaquel',                    // 28 (Col 29 - AC)
+    'fila',                       // 29 (Col 30 - AD)
+    'columna',                    // 30 (Col 31 - AE)
+    'paquete',                    // 31 (Col 32 - AF)
+    'documentos_json',            // 32 (Col 33 - AG)
+    'carpeta_drive_url'           // 33 (Col 34 - AH)
   ];
 
   let sheetSol = ss.getSheetByName('Solicitudes');
@@ -79,9 +78,13 @@ function inicializarHojas() {
       .setFontWeight('bold');
     sheetSol.setFrozenRows(1);
   } else {
+    // Migrar el esquema anterior eliminando la columna nro_solicitud.
+    if (String(sheetSol.getRange(1, 2).getValue() || '') === 'nro_solicitud') {
+      sheetSol.deleteColumn(2);
+    }
     // Si la hoja Solicitudes ya existía con las cabeceras antiguas, actualizar automáticamente la fila 1
     const primeraFila = sheetSol.getRange(1, 1, 1, headersSol.length).getValues()[0];
-    if (String(primeraFila[6] || '') !== 'razon_solicitud' || String(primeraFila[17] || '') !== 'numero_expediente_corto') {
+    if (String(primeraFila[5] || '') !== 'razon_solicitud' || String(primeraFila[16] || '') !== 'numero_expediente_corto') {
       sheetSol.getRange(1, 1, 1, headersSol.length)
         .setValues([headersSol])
         .setBackground('#7b1e22')
@@ -121,6 +124,8 @@ function inicializarHojas() {
         .setFontWeight('bold');
     }
   }
+
+  migrarIdsSolicitudesExistentes(sheetSol, sheetSeg);
 
   // 3. Hoja Usuarios (Módulo Configuración -> Personal)
   const headersUsr = [
@@ -228,12 +233,12 @@ function obtenerOCrearCarpetaRaiz() {
   return DriveApp.createFolder(FOLDER_NAME_ROOT);
 }
 
-function guardarArchivosEnDrive(nroSolicitud, dni, documentos) {
+function guardarArchivosEnDrive(idSolicitud, dni, documentos) {
   if (!documentos || !documentos.length) {
     return { documentosGuardados: [], folderUrl: '' };
   }
   const rootFolder = obtenerOCrearCarpetaRaiz();
-  const subFolderName = 'SOL_' + nroSolicitud + '_DNI_' + (dni || 'SINDNI');
+  const subFolderName = 'SOL_' + idSolicitud + '_DNI_' + (dni || 'SINDNI');
   let subFolder;
   const existing = rootFolder.getFoldersByName(subFolderName);
   if (existing.hasNext()) {
@@ -425,7 +430,7 @@ function obtenerTodasLasSolicitudes() {
     }
     eventosPorSolicitud[idSol].push({
       idEvento: Number(r[0]),
-      idSolicitud: Number(r[1]),
+      idSolicitud: String(r[1] || ''),
       accion: String(r[2] || ''),
       usuario: String(r[3] || ''),
       trabajador: String(r[4] || ''),
@@ -441,47 +446,46 @@ function obtenerTodasLasSolicitudes() {
     if (!r[0]) continue;
     let docs = [];
     try {
-      docs = r[33] ? JSON.parse(r[33]) : [];
+      docs = r[32] ? JSON.parse(r[32]) : [];
     } catch (e) {
       docs = [];
     }
-    const idSol = Number(r[0]);
+    const idSol = String(r[0]);
     solicitudes.push({
       idSolicitud: idSol,
-      nroSolicitud: Number(r[1]),
-      estado: String(r[2] || 'PENDIENTE'),
-      corte: String(r[3] || ''),
-      tipoUsuario: String(r[4] || ''),
-      tipoSolicitud: String(r[5] || ''),
-      razonSolicitud: String(r[6] || ''),
-      fechaInicio: formatearValorFecha(r[7]),
-      fechaFinal: formatearValorFecha(r[8]),
-      tiempoTranscurrido: String(r[9] || ''),
-      dni: String(r[10] || ''),
-      apellidos: String(r[11] || ''),
-      nombres: String(r[12] || ''),
-      email: String(r[13] || ''),
-      celular: String(r[14] || ''),
-      domicilioProcesal: String(r[15] || ''),
-      nroExpediente: String(r[16] || ''),
-      numeroExpedienteCorto: String(r[17] || ''),
-      anioExpediente: String(r[18] || ''),
-      codigoCompletoExpediente: String(r[19] || ''),
-      demandante: String(r[20] || ''),
-      demandado: String(r[21] || ''),
-      materiaDelito: String(r[22] || ''),
-      juzgadoEmisor: String(r[23] || ''),
-      secretarioRemitente: String(r[24] || ''),
-      fechaEnvioArchivo: formatearValorFecha(r[25]),
-      juzgadoRemitir: String(r[26] || ''),
-      motivoTramite: String(r[27] || ''),
-      ubicacion: String(r[28] || ''),
-      anaquel: String(r[29] || ''),
-      fila: String(r[30] || ''),
-      columna: String(r[31] || ''),
-      paquete: String(r[32] || ''),
+      estado: String(r[1] || 'PENDIENTE'),
+      corte: String(r[2] || ''),
+      tipoUsuario: String(r[3] || ''),
+      tipoSolicitud: String(r[4] || ''),
+      razonSolicitud: String(r[5] || ''),
+      fechaInicio: formatearValorFecha(r[6]),
+      fechaFinal: formatearValorFecha(r[7]),
+      tiempoTranscurrido: String(r[8] || ''),
+      dni: String(r[9] || ''),
+      apellidos: String(r[10] || ''),
+      nombres: String(r[11] || ''),
+      email: String(r[12] || ''),
+      celular: String(r[13] || ''),
+      domicilioProcesal: String(r[14] || ''),
+      nroExpediente: String(r[15] || ''),
+      numeroExpedienteCorto: String(r[16] || ''),
+      anioExpediente: String(r[17] || ''),
+      codigoCompletoExpediente: String(r[18] || ''),
+      demandante: String(r[19] || ''),
+      demandado: String(r[20] || ''),
+      materiaDelito: String(r[21] || ''),
+      juzgadoEmisor: String(r[22] || ''),
+      secretarioRemitente: String(r[23] || ''),
+      fechaEnvioArchivo: formatearValorFecha(r[24]),
+      juzgadoRemitir: String(r[25] || ''),
+      motivoTramite: String(r[26] || ''),
+      ubicacion: String(r[27] || ''),
+      anaquel: String(r[28] || ''),
+      fila: String(r[29] || ''),
+      columna: String(r[30] || ''),
+      paquete: String(r[31] || ''),
       documentos: docs,
-      carpetaDriveUrl: String(r[34] || ''),
+      carpetaDriveUrl: String(r[33] || ''),
       eventos: eventosPorSolicitud[String(idSol)] || []
     });
   }
@@ -489,19 +493,57 @@ function obtenerTodasLasSolicitudes() {
   return solicitudes.reverse();
 }
 
+function generarIdSolicitud(sheetSol) {
+  const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let codigo = '';
+  let existe = true;
+  const ids = sheetSol.getLastRow() > 1
+    ? sheetSol.getRange(2, 1, sheetSol.getLastRow() - 1, 1).getValues().map(function (r) { return String(r[0]); })
+    : [];
+
+  while (existe) {
+    codigo = '';
+    for (let i = 0; i < 6; i++) {
+      codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
+    existe = ids.indexOf(codigo) !== -1;
+  }
+  return codigo;
+}
+
+function migrarIdsSolicitudesExistentes(sheetSol, sheetSeg) {
+  const filasSolicitudes = sheetSol.getDataRange().getValues();
+  const equivalencias = {};
+
+  for (let i = 1; i < filasSolicitudes.length; i++) {
+    const idAnterior = String(filasSolicitudes[i][0] || '').trim();
+    if (idAnterior && /^\d+$/.test(idAnterior)) {
+      const idNuevo = generarIdSolicitud(sheetSol);
+      sheetSol.getRange(i + 1, 1).setValue(idNuevo);
+      equivalencias[idAnterior] = idNuevo;
+    }
+  }
+
+  if (Object.keys(equivalencias).length === 0) return;
+
+  const filasSeguimiento = sheetSeg.getDataRange().getValues();
+  for (let i = 1; i < filasSeguimiento.length; i++) {
+    const idSeguimiento = String(filasSeguimiento[i][1] || '').trim();
+    if (equivalencias[idSeguimiento]) {
+      sheetSeg.getRange(i + 1, 2).setValue(equivalencias[idSeguimiento]);
+    }
+  }
+}
+
 function crearSolicitud(sol) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetSol = ss.getSheetByName('Solicitudes');
-  const lastRow = sheetSol.getLastRow();
-  const nextId = lastRow; // 1-based considerando fila de encabezado
-  const nroSolicitud = nextId;
+  const idSolicitud = generarIdSolicitud(sheetSol);
 
-  const resultadoDrive = guardarArchivosEnDrive(nroSolicitud, sol.dni, sol.documentos || []);
+  const resultadoDrive = guardarArchivosEnDrive(idSolicitud, sol.dni, sol.documentos || []);
 
   const fechaRegistro = formatearValorFecha(sol.fechaInicio) || formatearFechaActual();
   const nuevaFila = [
-    nextId,
-    nroSolicitud,
     sol.estado || 'PENDIENTE',
     sol.corte || '',
     sol.tipoUsuario || '',
@@ -536,12 +578,12 @@ function crearSolicitud(sol) {
     JSON.stringify(resultadoDrive.documentosGuardados),
     resultadoDrive.folderUrl
   ];
+  nuevaFila.unshift(idSolicitud);
 
   sheetSol.appendRow(nuevaFila);
 
   agregarEventoSeguimiento({
-    idSolicitud: nextId,
-    nroSolicitud: nroSolicitud,
+    idSolicitud: idSolicitud,
     dni: sol.dni || 'EXTERNO',
     accion: 'REGISTRO DE SOLICITUD',
     usuario: sol.dni || 'EXTERNO',
@@ -553,8 +595,7 @@ function crearSolicitud(sol) {
 
   return {
     ok: true,
-    idSolicitud: nextId,
-    nroSolicitud: nroSolicitud,
+    idSolicitud: idSolicitud,
     documentos: resultadoDrive.documentosGuardados,
     carpetaDriveUrl: resultadoDrive.folderUrl
   };
@@ -566,14 +607,14 @@ function cambiarEstadoSolicitud(payload) {
   const rows = sheetSol.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
-    if (Number(rows[i][0]) === Number(payload.idSolicitud)) {
+    if (String(rows[i][0]) === String(payload.idSolicitud)) {
       const rowIndex = i + 1;
-      sheetSol.getRange(rowIndex, 3).setValue(payload.nuevoEstado);
+      sheetSol.getRange(rowIndex, 2).setValue(payload.nuevoEstado);
       if (payload.fechaFinal) {
-        sheetSol.getRange(rowIndex, 9).setValue("'" + formatearValorFecha(payload.fechaFinal));
+        sheetSol.getRange(rowIndex, 8).setValue("'" + formatearValorFecha(payload.fechaFinal));
       }
       if (payload.tiempoTranscurrido) {
-        sheetSol.getRange(rowIndex, 10).setValue(payload.tiempoTranscurrido);
+        sheetSol.getRange(rowIndex, 9).setValue(payload.tiempoTranscurrido);
       }
       agregarEventoSeguimiento({
         idSolicitud: payload.idSolicitud,
@@ -599,7 +640,7 @@ function agregarEventoSeguimiento(payload) {
   if (payload.documento) {
     if (payload.documento.base64Data) {
       const resDrive = guardarArchivosEnDrive(
-        payload.nroSolicitud || payload.idSolicitud,
+        payload.idSolicitud,
         payload.dni || 'SEGUIMIENTO',
         [payload.documento]
       );
@@ -631,13 +672,13 @@ function actualizarUbicacionSolicitud(payload) {
   const rows = sheetSol.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
-    if (Number(rows[i][0]) === Number(payload.idSolicitud)) {
+    if (String(rows[i][0]) === String(payload.idSolicitud)) {
       const rowIndex = i + 1;
-      sheetSol.getRange(rowIndex, 29).setValue(payload.ubicacion || '');
-      sheetSol.getRange(rowIndex, 30).setValue(payload.anaquel || '');
-      sheetSol.getRange(rowIndex, 31).setValue(payload.fila || '');
-      sheetSol.getRange(rowIndex, 32).setValue(payload.columna || '');
-      sheetSol.getRange(rowIndex, 33).setValue(payload.paquete || '');
+      sheetSol.getRange(rowIndex, 28).setValue(payload.ubicacion || '');
+      sheetSol.getRange(rowIndex, 29).setValue(payload.anaquel || '');
+      sheetSol.getRange(rowIndex, 30).setValue(payload.fila || '');
+      sheetSol.getRange(rowIndex, 31).setValue(payload.columna || '');
+      sheetSol.getRange(rowIndex, 32).setValue(payload.paquete || '');
 
       agregarEventoSeguimiento({
         idSolicitud: payload.idSolicitud,
@@ -659,7 +700,7 @@ function enviarCorreoSolicitante(payload) {
     return { ok: false, error: 'Falta correo destinatario' };
   }
 
-  const asunto = payload.asunto || ('Atención de Solicitud de Archivo N° ' + payload.nroSolicitud + ' - Poder Judicial');
+  const asunto = payload.asunto || ('Atención de Solicitud ' + payload.idSolicitud + ' - Poder Judicial');
   const cuerpo = payload.mensaje || '';
   const opciones = {
     name: 'Sistema de Gestión de Archivo - Poder Judicial',

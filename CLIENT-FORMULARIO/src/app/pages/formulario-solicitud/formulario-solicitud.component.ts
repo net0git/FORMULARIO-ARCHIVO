@@ -10,6 +10,7 @@ import {
 } from '../../models/archivo.models';
 import { ArchivoService } from '../../services/archivo.service';
 import { PdfViewerModalComponent } from '../../components/pdf-viewer-modal/pdf-viewer-modal.component';
+import { PdfConstanciaService } from '../../services/pdf-constancia.service';
 
 @Component({
   selector: 'app-formulario-solicitud',
@@ -82,8 +83,19 @@ export class FormularioSolicitudComponent implements OnInit {
   mostrarAlertaSolicitudRegistrada = false;
   solicitudRecienRegistrada: SolicitudArchivo | null = null;
   mostrarVisorPdf = false;
+  mostrarResumenCelular = false;
+  resumenSoloDescargar = false;
+  mostrarMensajeEnvioTemporalModal = false;
+  mensajeEnvioTemporalPreparando = false;
+  mensajeEnvioTemporalError = '';
+  enviandoResumenCelular = false;
+  mensajeResumenCelular = '';
+  correoResumenCelularEnviado = false;
 
-  constructor(public archivoService: ArchivoService) {}
+  constructor(
+    public archivoService: ArchivoService,
+    private pdfConstanciaService: PdfConstanciaService
+  ) {}
 
   ngOnInit(): void {
     const anioActual = new Date().getFullYear();
@@ -390,14 +402,7 @@ export class FormularioSolicitudComponent implements OnInit {
       });
 
       this.solicitudRecienRegistrada = creada;
-      this.mostrarAlertaSolicitudRegistrada = true;
-
-      setTimeout(() => {
-        if (this.mostrarAlertaSolicitudRegistrada) {
-          this.mostrarAlertaSolicitudRegistrada = false;
-          this.mostrarVisorPdf = true;
-        }
-      }, 1800);
+      await this.iniciarProcesoFinalSolicitud();
     } catch {
       this.alertasValidacion.push('NO SE PUDO ENVIAR LA SOLICITUD. INTENTE NUEVAMENTE.');
     } finally {
@@ -405,9 +410,90 @@ export class FormularioSolicitudComponent implements OnInit {
     }
   }
 
-  cerrarAlertaYVerPdf(): void {
+  cerrarAlertaYVerResumen(): void {
     this.mostrarAlertaSolicitudRegistrada = false;
-    this.mostrarVisorPdf = true;
+    this.mostrarVisorPdf = false;
+    this.mensajeResumenCelular = '';
+    this.correoResumenCelularEnviado = false;
+    this.resumenSoloDescargar = false;
+    this.mostrarResumenCelular = true;
+  }
+
+  private async iniciarProcesoFinalSolicitud(): Promise<void> {
+    this.mostrarAlertaSolicitudRegistrada = false;
+    this.mostrarVisorPdf = false;
+    this.mostrarResumenCelular = false;
+    this.mostrarMensajeEnvioTemporalModal = true;
+    this.mensajeEnvioTemporalPreparando = true;
+    this.mensajeEnvioTemporalError = '';
+    this.resumenSoloDescargar = false;
+
+    const inicio = Date.now();
+    const enviado = await this.enviarResumenCelular();
+    const tiempoRestante = Math.max(0, 3000 - (Date.now() - inicio));
+
+    if (tiempoRestante > 0) {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, tiempoRestante));
+    }
+
+    this.mensajeEnvioTemporalPreparando = false;
+    if (!enviado) {
+      this.mensajeEnvioTemporalError =
+        this.mensajeResumenCelular || 'No se pudo enviar automáticamente la constancia.';
+    }
+  }
+
+  continuarDesdeMensajeEnvioTemporal(): void {
+    if (this.mensajeEnvioTemporalPreparando || this.mensajeEnvioTemporalError) return;
+
+    this.mostrarMensajeEnvioTemporalModal = false;
+    this.mostrarVisorPdf = false;
+    this.mensajeResumenCelular = 'Constancia enviada correctamente.';
+    this.correoResumenCelularEnviado = true;
+    this.resumenSoloDescargar = true;
+    this.mostrarResumenCelular = true;
+  }
+
+  async enviarResumenCelular(): Promise<boolean> {
+    if (!this.solicitudRecienRegistrada || this.enviandoResumenCelular) return false;
+
+    this.enviandoResumenCelular = true;
+    this.mensajeResumenCelular = '';
+    try {
+      const pdfBase64 = await this.pdfConstanciaService.obtenerBase64Pdf(this.solicitudRecienRegistrada);
+      const resultado = await this.archivoService.enviarConstanciaPorCorreo(
+        this.solicitudRecienRegistrada,
+        pdfBase64
+      );
+      this.mensajeResumenCelular = resultado.ok
+        ? 'Constancia enviada correctamente.'
+        : (resultado.error || 'No se pudo enviar la constancia.');
+      this.correoResumenCelularEnviado = resultado.ok;
+      return resultado.ok;
+    } catch {
+      this.mensajeResumenCelular = 'No se pudo enviar la constancia.';
+      return false;
+    } finally {
+      this.enviandoResumenCelular = false;
+    }
+  }
+
+  async cerrarResumenCelular(): Promise<void> {
+    if (this.enviandoResumenCelular) return;
+
+    if (!this.correoResumenCelularEnviado) {
+      const enviado = await this.enviarResumenCelular();
+      if (!enviado) return;
+    }
+
+    this.mostrarResumenCelular = false;
+    window.location.reload();
+  }
+
+  async descargarResumenCelular(): Promise<void> {
+    if (this.solicitudRecienRegistrada) {
+      await this.pdfConstanciaService.descargarConstanciaPdf(this.solicitudRecienRegistrada);
+    }
   }
 
   finalizarYReiniciarFormulario(): void {

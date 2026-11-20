@@ -133,8 +133,8 @@ export class AtencionSolicitudesComponent implements OnInit {
   solicitudTieneQuipuscan = false;
 
   // Mapa de persistencia Quipuscan por idSolicitud (para mantener el acceso después de guardar)
-  solicitudesQuipuscanMap = new Map<number, QuipuscanExpediente>();
-  solicitudesExpedienteArchivoMap = new Map<number, ExpedienteArchivoCentral>();
+  solicitudesQuipuscanMap = new Map<string, QuipuscanExpediente>();
+  solicitudesExpedienteArchivoMap = new Map<string, ExpedienteArchivoCentral>();
 
   // 6. Modal Constancia PDF y Visor de Documentos Adjuntos (Pág. 20 y 21)
   mostrarModalPdf = false;
@@ -184,7 +184,7 @@ export class AtencionSolicitudesComponent implements OnInit {
       this.todasLasSolicitudes = lista;
       this.aplicarFiltros();
       if (this.solicitudActiva) {
-        const actualizada = lista.find((s) => Number(s.idSolicitud) === Number(this.solicitudActiva?.idSolicitud));
+        const actualizada = lista.find((s) => s.idSolicitud === this.solicitudActiva?.idSolicitud);
         if (actualizada) {
           this.solicitudActiva = actualizada;
         }
@@ -425,7 +425,7 @@ export class AtencionSolicitudesComponent implements OnInit {
     this.correoDestinatario = sol.email || '';
     this.correoCc = '';
     this.correoRespaldo = 'dfa.diego.flores@gmail.com';
-    this.correoMensaje = `Buenos días señor(a) ${sol.nombres} ${sol.apellidos}, se está procediendo a atender su trámite (Solicitud N° ${sol.nroSolicitud} - Exp. ${sol.nroExpediente}), agradecemos su espera.`;
+    this.correoMensaje = `Buenos días señor(a) ${sol.nombres} ${sol.apellidos}, se está procediendo a atender su trámite (Código ${sol.idSolicitud} - Exp. ${sol.nroExpediente}), agradecemos su espera.`;
     this.correoAdjuntosExtras = [{ id: Date.now(), archivo: null, base64: '', nombre: '' }];
     this.mostrarModalEnviarCorreo = true;
   }
@@ -464,7 +464,7 @@ export class AtencionSolicitudesComponent implements OnInit {
     if (this.correoEnviarOriginal) {
       adjuntosEnviar.push({
         id: 1,
-        nombreArchivo: `CONSTANCIA_SOLICITUD_${this.solicitudActiva.nroSolicitud}.pdf`,
+        nombreArchivo: `CONSTANCIA_SOLICITUD_${this.solicitudActiva.idSolicitud}.pdf`,
         descripcion: 'SOLICITUD ORIGINAL',
         tipo: 'OTRO',
         mimeType: 'application/pdf',
@@ -490,7 +490,6 @@ export class AtencionSolicitudesComponent implements OnInit {
 
     await this.archivoService.enviarCorreo({
       idSolicitud: this.solicitudActiva.idSolicitud,
-      nroSolicitud: this.solicitudActiva.nroSolicitud,
       destinatario: this.correoDestinatario.trim(),
       cc: this.correoCc.trim(),
       correoRespaldo: this.correoRespaldo.trim(),
@@ -1009,7 +1008,7 @@ export class AtencionSolicitudesComponent implements OnInit {
         Object.keys(mapa).forEach((idStr) => {
           const entry = mapa[idStr];
           if (entry && entry.quipuscan) {
-            const idSol = Number(idStr);
+            const idSol = idStr;
             this.solicitudesQuipuscanMap.set(idSol, entry.quipuscan);
             this.quipuscanMap.set(entry.quipuscan.nro_expediente, entry.quipuscan);
             if (entry.expedienteArchivo) {
@@ -1024,7 +1023,7 @@ export class AtencionSolicitudesComponent implements OnInit {
   }
 
   guardarVinculoQuipuscan(
-    idSolicitud: number,
+    idSolicitud: string,
     nroExpediente: string,
     quipuscan: QuipuscanExpediente,
     expArchivo?: ExpedienteArchivoCentral

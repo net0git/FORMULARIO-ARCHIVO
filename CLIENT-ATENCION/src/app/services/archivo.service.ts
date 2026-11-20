@@ -132,9 +132,9 @@ export class ArchivoService {
     }
   }
 
-  async cambiarEstado(idSolicitud: number, nuevoEstado: EstadoSolicitud): Promise<void> {
+  async cambiarEstado(idSolicitud: string, nuevoEstado: EstadoSolicitud): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
+    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
@@ -184,12 +184,12 @@ export class ArchivoService {
   }
 
   async agregarSeguimiento(
-    idSolicitud: number,
+    idSolicitud: string,
     descripcion: string,
     documento?: DocumentoAdjunto | null
   ): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
+    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
@@ -221,7 +221,6 @@ export class ArchivoService {
           body: JSON.stringify({
             action: 'agregarSeguimiento',
             idSolicitud: sol.idSolicitud,
-            nroSolicitud: sol.nroSolicitud,
             dni: sol.dni,
             accion: 'SEGUIMIENTO',
             usuario: nuevoEvento.usuario,
@@ -243,11 +242,11 @@ export class ArchivoService {
   }
 
   async actualizarUbicacion(
-    idSolicitud: number,
+    idSolicitud: string,
     datosUbicacion: { ubicacion: string; anaquel: string; fila: string; columna: string; paquete: string }
   ): Promise<void> {
     const lista = [...this.obtenerSolicitudesActuales()];
-    const idx = lista.findIndex((s) => Number(s.idSolicitud) === Number(idSolicitud));
+    const idx = lista.findIndex((s) => s.idSolicitud === idSolicitud);
     if (idx === -1) return;
 
     const sol = { ...lista[idx] };
@@ -301,8 +300,7 @@ export class ArchivoService {
   }
 
   async enviarCorreo(payload: {
-    idSolicitud: number;
-    nroSolicitud: number;
+    idSolicitud: string;
     destinatario: string;
     cc: string;
     correoRespaldo: string;
@@ -384,11 +382,11 @@ export class ArchivoService {
       return { ok: false, error: 'La solicitud no cuenta con un correo electrónico registrado.' };
     }
     const nombreSolicitante = `${solicitud.nombres || ''} ${solicitud.apellidos || ''}`.trim();
-    const asunto = `Constancia de Solicitud de Archivo N° ${solicitud.nroSolicitud} - Poder Judicial del Perú`;
+    const asunto = `Constancia de Solicitud ${solicitud.idSolicitud} - Poder Judicial del Perú`;
     const mensaje = [
       `Estimado(a) ${nombreSolicitante}:`,
       '',
-      `Adjuntamos a este correo su Constancia de Solicitud N° ${solicitud.nroSolicitud} en formato PDF (${solicitud.tipoSolicitud} - Exp. ${solicitud.nroExpediente}).`,
+      `Adjuntamos a este correo su Constancia de Solicitud ${solicitud.idSolicitud} en formato PDF (${solicitud.tipoSolicitud} - Exp. ${solicitud.nroExpediente}).`,
       '',
       `Recuerde que el plazo de atención es de 5 a 7 días hábiles contabilizados a partir de verificada y admitida su solicitud.`
     ].join('\n');
@@ -405,14 +403,14 @@ export class ArchivoService {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'enviarCorreo',
-          nroSolicitud: solicitud.nroSolicitud,
+          idSolicitud: solicitud.idSolicitud,
           registrarEvento: false,
           destinatario,
           asunto,
           mensaje,
           adjuntos: [
             {
-              nombreArchivo: `CONSTANCIA_SOLICITUD_NRO_${solicitud.nroSolicitud}.pdf`,
+              nombreArchivo: `CONSTANCIA_SOLICITUD_${solicitud.idSolicitud}.pdf`,
               mimeType: 'application/pdf',
               base64Data: pdfBase64
             }
@@ -433,7 +431,7 @@ export class ArchivoService {
     const filasExcel = solicitudes.map((s) => ({
       estado: s.estado === 'PENDIENTE' ? 1 : s.estado === 'EN PROCESO' ? 2 : s.estado === 'CITADO' ? 3 : 4,
       estado_nombre: s.estado,
-      id_solicitud_archivo: s.nroSolicitud,
+      id_solicitud_archivo: s.idSolicitud,
       nombres: s.nombres,
       apellidos: s.apellidos,
       dni: s.dni,

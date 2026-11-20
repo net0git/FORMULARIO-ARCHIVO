@@ -110,8 +110,7 @@ export class ArchivoService {
 
     const fechaActual = this.formatearFechaHoraActual();
     const nueva: SolicitudArchivo = {
-      idSolicitud: 1,
-      nroSolicitud: 1,
+      idSolicitud: 'TEMP01',
       estado: 'PENDIENTE',
       corte: (parcial.corte || '').toUpperCase(),
       tipoUsuario: (parcial.tipoUsuario || '').toUpperCase(),
@@ -147,7 +146,7 @@ export class ArchivoService {
       eventos: [
         {
           idEvento: 1,
-          idSolicitud: 1,
+           idSolicitud: 'TEMP01',
           accion: 'REGISTRO DE SOLICITUD',
           usuario: parcial.dni || 'EXTERNO',
           trabajador: `${parcial.apellidos || ''} ${parcial.nombres || ''}`.trim().toUpperCase(),
@@ -157,7 +156,7 @@ export class ArchivoService {
       ]
     };
 
-    const docSolicitudBase64 = this.pdfService.obtenerBase64Pdf(nueva);
+    const docSolicitudBase64 = await this.pdfService.obtenerBase64Pdf(nueva);
     const documentoSolicitud = {
       id: Date.now(),
       nombreArchivo: `CONSTANCIA_SOLICITUD_DNI_${nueva.dni || 'EXT'}.pdf`,
@@ -186,7 +185,6 @@ export class ArchivoService {
       const data = await res.json();
       if (data && data.ok) {
         nueva.idSolicitud = data.idSolicitud || nueva.idSolicitud;
-        nueva.nroSolicitud = data.nroSolicitud || nueva.nroSolicitud;
         if (data.documentos) {
           nueva.documentos = data.documentos;
         }
@@ -215,21 +213,21 @@ export class ArchivoService {
     }
 
     const nombreSolicitante = `${solicitud.nombres || ''} ${solicitud.apellidos || ''}`.trim();
-    const asunto = `Constancia de Solicitud de Archivo N° ${solicitud.nroSolicitud} - Poder Judicial del Perú`;
+    const asunto = `Constancia de Solicitud ${solicitud.idSolicitud} - Poder Judicial del Perú`;
     const mensaje = [
       `Estimado(a) ${nombreSolicitante}:`,
       '',
       `Su solicitud ha sido registrada satisfactoriamente en el Sistema de Gestión de Archivo Central (${solicitud.corte}).`,
       '',
       `RESUMEN DE LA SOLICITUD:`,
-      `• N° de Solicitud: ${solicitud.nroSolicitud}`,
+      `• Código de Solicitud: ${solicitud.idSolicitud}`,
       `• Fecha de Registro: ${solicitud.fechaInicio}`,
       `• Trámite Solicitado: ${solicitud.tipoSolicitud}`,
       `• N° de Expediente: ${solicitud.nroExpediente}`,
       `• Juzgado / Instancia: ${solicitud.juzgadoEmisor || '-'}`,
       `• DNI Solicitante: ${solicitud.dni}`,
       '',
-      `Adjuntamos a este correo su Constancia de Solicitud en formato PDF (CONSTANCIA_SOLICITUD_NRO_${solicitud.nroSolicitud}.pdf).`,
+      `Adjuntamos a este correo su Constancia de Solicitud en formato PDF (CONSTANCIA_SOLICITUD_${solicitud.idSolicitud}.pdf).`,
       '',
       `Recuerde que el plazo de atención es de 5 a 7 días hábiles contabilizados a partir de verificada y admitida su solicitud.`
     ].join('\n');
@@ -241,14 +239,14 @@ export class ArchivoService {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'enviarCorreo',
-          nroSolicitud: solicitud.nroSolicitud,
+          idSolicitud: solicitud.idSolicitud,
           registrarEvento: false,
           destinatario,
           asunto,
           mensaje,
           adjuntos: [
             {
-              nombreArchivo: `CONSTANCIA_SOLICITUD_NRO_${solicitud.nroSolicitud}.pdf`,
+              nombreArchivo: `CONSTANCIA_SOLICITUD_${solicitud.idSolicitud}.pdf`,
               mimeType: 'application/pdf',
               base64Data: pdfBase64
             }
