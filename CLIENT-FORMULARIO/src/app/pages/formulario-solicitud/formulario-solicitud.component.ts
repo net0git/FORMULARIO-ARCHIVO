@@ -412,9 +412,11 @@ export class FormularioSolicitudComponent implements OnInit {
     }
   }
 
-  cerrarAlertaYVerPdf(): void {
+  cerrarAlertaYVerResumen(): void {
     this.mostrarAlertaSolicitudRegistrada = false;
-    this.mostrarVisorPdf = true;
+    this.mostrarVisorPdf = false;
+    this.mensajeResumenCelular = '';
+    this.mostrarResumenCelular = true;
   }
 
   async mostrarSolicitudTemporal(): Promise<void> {
