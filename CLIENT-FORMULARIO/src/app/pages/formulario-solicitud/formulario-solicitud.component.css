@@ -256,6 +256,11 @@
   line-height: 1.55;
 }
 
+.pj-email-warning {
+  color: #7b1e22;
+  font-weight: 700;
+}
+
 .btn-temporal-solicitud {
   align-self: center;
   margin-top: 16px;
