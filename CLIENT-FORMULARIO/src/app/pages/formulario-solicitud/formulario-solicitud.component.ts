@@ -401,8 +401,7 @@ export class FormularioSolicitudComponent implements OnInit {
 
       setTimeout(() => {
         if (this.mostrarAlertaSolicitudRegistrada) {
-          this.mostrarAlertaSolicitudRegistrada = false;
-          this.mostrarVisorPdf = true;
+          this.cerrarAlertaYVerResumen();
         }
       }, 1800);
     } catch {
