@@ -216,6 +216,7 @@ export class FormularioSolicitudComponent implements OnInit {
     this.limpiarAlertas();
     if (!this.conectado) return;
     const limpioDni = (this.dni || '').trim();
+    const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim());
 
     if (!this.dniValidado && !this.documentoDniAdjunto) {
       this.alertasValidacion.push('PRESIONE EL BOTÓN BUSCAR(ICONO LUPA) PARA VALIDAR SU DNI O ADJUNTE SU FOTO/PDF');
@@ -230,6 +231,10 @@ export class FormularioSolicitudComponent implements OnInit {
       !this.domicilioProcesal.trim()
     ) {
       this.alertasValidacion.push('LLENE TODOS LOS CAMPOS PARA CONTINUAR EN LA SIGUIENTE PANTALLA');
+    }
+
+    if (this.email.trim() && !correoValido) {
+      this.alertasValidacion.push('INGRESE UN CORREO ELECTRÓNICO VÁLIDO');
     }
 
     if (this.alertasValidacion.length > 0) {
@@ -350,45 +355,54 @@ export class FormularioSolicitudComponent implements OnInit {
       );
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim())) {
+      this.alertasValidacion.push('INGRESE UN CORREO ELECTRÓNICO VÁLIDO');
+      return;
+    }
 
     const expedienteIdentificador = this.numeroExpedienteCompleto.trim()
       ? this.numeroExpedienteCompleto.trim()
       : `${this.numeroExpedienteCorto.trim()}-${this.anioExpediente.trim()}`;
 
     this.registrando = true;
-    const creada = await this.archivoService.registrarNuevaSolicitud({
-      corte: this.corteSeleccionada,
-      tipoUsuario: this.tipoUsuarioSeleccionado,
-      tipoSolicitud: this.solicitoSeleccionado,
-      razonSolicitud: this.razonSolicitud.trim(),
-      motivoTramite: this.razonSolicitud.trim(),
-      dni: this.dni.trim(),
-      apellidos: this.apellidos.trim(),
-      nombres: this.nombres.trim(),
-      email: this.email.trim(),
-      celular: this.celular.trim(),
-      domicilioProcesal: this.domicilioProcesal.trim(),
-      nroExpediente: expedienteIdentificador,
-      numeroExpedienteCorto: this.numeroExpedienteCorto.trim(),
-      anioExpediente: this.anioExpediente.trim(),
-      codigoCompletoExpediente: this.numeroExpedienteCompleto.trim(),
-      demandante: this.demandante.trim(),
-      demandado: this.demandado.trim(),
-      materiaDelito: this.materiaDelito.trim(),
-      juzgadoEmisor: this.juzgadoInstancia.trim(),
-      documentos: this.documentosAdjuntos
-    });
+    try {
+      const creada = await this.archivoService.registrarNuevaSolicitud({
+        corte: this.corteSeleccionada,
+        tipoUsuario: this.tipoUsuarioSeleccionado,
+        tipoSolicitud: this.solicitoSeleccionado,
+        razonSolicitud: this.razonSolicitud.trim(),
+        motivoTramite: this.razonSolicitud.trim(),
+        dni: this.dni.trim(),
+        apellidos: this.apellidos.trim(),
+        nombres: this.nombres.trim(),
+        email: this.email.trim(),
+        celular: this.celular.trim(),
+        domicilioProcesal: this.domicilioProcesal.trim(),
+        nroExpediente: expedienteIdentificador,
+        numeroExpedienteCorto: this.numeroExpedienteCorto.trim(),
+        anioExpediente: this.anioExpediente.trim(),
+        codigoCompletoExpediente: this.numeroExpedienteCompleto.trim(),
+        demandante: this.demandante.trim(),
+        demandado: this.demandado.trim(),
+        materiaDelito: this.materiaDelito.trim(),
+        juzgadoEmisor: this.juzgadoInstancia.trim(),
+        documentos: this.documentosAdjuntos
+      });
 
-    this.registrando = false;
-    this.solicitudRecienRegistrada = creada;
-    this.mostrarAlertaSolicitudRegistrada = true;
+      this.solicitudRecienRegistrada = creada;
+      this.mostrarAlertaSolicitudRegistrada = true;
 
-    setTimeout(() => {
-      if (this.mostrarAlertaSolicitudRegistrada) {
-        this.mostrarAlertaSolicitudRegistrada = false;
-        this.mostrarVisorPdf = true;
-      }
-    }, 1800);
+      setTimeout(() => {
+        if (this.mostrarAlertaSolicitudRegistrada) {
+          this.mostrarAlertaSolicitudRegistrada = false;
+          this.mostrarVisorPdf = true;
+        }
+      }, 1800);
+    } catch {
+      this.alertasValidacion.push('NO SE PUDO ENVIAR LA SOLICITUD. INTENTE NUEVAMENTE.');
+    } finally {
+      this.registrando = false;
+    }
   }
 
   cerrarAlertaYVerPdf(): void {

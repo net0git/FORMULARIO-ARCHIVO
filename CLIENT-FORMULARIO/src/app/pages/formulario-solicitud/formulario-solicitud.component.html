@@ -537,8 +537,8 @@
               (click)="registrarSolicitudFinal()"
               [disabled]="registrando"
             >
-              <span>{{ registrando ? 'Registrando...' : 'Registrar' }}</span>
-              <i class="fa-regular fa-floppy-disk"></i>
+              <span>{{ registrando ? 'Enviando...' : 'Enviar' }}</span>
+              <i [class]="registrando ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-paper-plane'"></i>
             </button>
           </div>
         </div>
